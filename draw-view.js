@@ -26,6 +26,13 @@ function DrawView(options) {
 	this.backgroundColor = options.backgroundColor?options.backgroundColor:"white";
 	var _currentDocumentVersion = "1.0";
 	
+	var isMobileSafari = (function() {
+		return /Apple.*Mobile/.test(navigator.userAgent);
+	})();
+	var isAndroid = (function() {
+		return /Android/i.test(navigator.userAgent);
+	})();
+	
 	this.setColor = function(r, g, b) {
 		this.color = "rgba("+r+","+g+","+b;
 	};
@@ -102,45 +109,58 @@ function DrawView(options) {
 	/*
 		Setting up some parameters before interpolating the curve cuts out a handful operations for each interpolated point.
 	*/
-	var p0,p1,p2,p3,q0,q1,q2,q3;
-	this.initializeCurve = function(v1, v2){
-		var r = distance(v1.origin, v2.origin);
+	this.initializeCurve = function(t1, t2){
+		var p0,p1,p2,p3,q0,q1,q2,q3, r = distance(t1.origin, t2.origin);
 		
-		p0 = v1.origin.x;
-		p1 = r * v1.direction.x;
-		p2 = 3 * (v2.origin.x - v1.origin.x) - r * (v2.direction.x + 2 * v1.direction.x);
-		p3 = -2 * (v2.origin.x - v1.origin.x) + r * (v2.direction.x + v1.direction.x);
+		p0 = t1.origin.x;
+		p1 = r * t1.direction.x;
+		p2 = 3 * (t2.origin.x - t1.origin.x) - r * (t2.direction.x + 2 * t1.direction.x);
+		p3 = -2 * (t2.origin.x - t1.origin.x) + r * (t2.direction.x + t1.direction.x);
 		
-		q0 = v1.origin.y;
-		q1 = r * v1.direction.y;
-		q2 = 3 * (v2.origin.y - v1.origin.y) - r * (v2.direction.y + 2 * v1.direction.y);
-		q3 = -2 * (v2.origin.y - v1.origin.y) + r * (v2.direction.y + v1.direction.y);
+		q0 = t1.origin.y;
+		q1 = r * t1.direction.y;
+		q2 = 3 * (t2.origin.y - t1.origin.y) - r * (t2.direction.y + 2 * t1.direction.y);
+		q3 = -2 * (t2.origin.y - t1.origin.y) + r * (t2.direction.y + t1.direction.y);
+		return [p0,p1,p2,p3,q0,q1,q2,q3];
 	};
-	this.curveInterp = function(t){
+	this.curveInterp = function(t, p0,p1,p2,p3,q0,q1,q2,q3){
 		var t2 = t*t, t3 = t2*t;
 		return {x: p0 + p1*t + p2*t2 + p3*t3, y: q0 + q1*t + q2*t2 + q3*t3};
 	};
 	this.linearInterp = function(t, start, end) {
 		return start + (end-start)*t;
 	};
-	this.drawCurve = function(vStart, vEnd) {
-		var wStart, wEnd = vEnd.width, currentWidth = wStart = vStart.width;
+	this.drawCurve = function(vStart, vEnd, t1, t2) {
+		// calculate curve parameters
+		var p0,p1,p2,p3,q0,q1,q2,q3, r = distance(t1.origin, t2.origin);
+		p0 = t1.origin.x;
+		p1 = r * t1.direction.x;
+		p2 = 3 * (t2.origin.x - t1.origin.x) - r * (t2.direction.x + 2 * t1.direction.x);
+		p3 = -2 * (t2.origin.x - t1.origin.x) + r * (t2.direction.x + t1.direction.x);
+		q0 = t1.origin.y;
+		q1 = r * t1.direction.y;
+		q2 = 3 * (t2.origin.y - t1.origin.y) - r * (t2.direction.y + 2 * t1.direction.y);
+		q3 = -2 * (t2.origin.y - t1.origin.y) + r * (t2.direction.y + t1.direction.y);
+	
+/* 		var wStart, wEnd = vEnd.width, currentWidth = wStart = vStart.width; */
+		var currentWidth =  vStart.width;
 		var kStrokeStep = 0.45; //0.65f;
-		var kIncrement = 0.001;  
+		var kIncrement = 0.001;//0.001;  
 		var curve = this.curveInterp;
-		var linearInterp = this.linearInterp;
+/* 		var linearInterp = this.linearInterp; */
 		var tFinder = 0;
 		var tempVert;
-		var drawVertex = curve(0.0);
+		var drawVertex = {x:vStart.x, y:vStart.y}; //curve(0.0);
 		
-		this.drawDot(drawVertex.x, drawVertex.y, wStart, arguments[2]);
+		this.drawDot(drawVertex.x, drawVertex.y, currentWidth, arguments[4]);
 		
 		for (var t = 0; t+tFinder<1.0; t+=tFinder) {
 			// Find next t appropriate for current width:
 			//
 			// set tempVert to the point at the end of this spline segment
-			tempVert = curve(1.0);
-			if (distance(drawVertex, tempVert) < (kStrokeStep*currentWidth)) {
+			tempVert = {x:vEnd.x, y:vEnd.y}//curve(1.0);
+			var d = distance(drawVertex, tempVert), w = (kStrokeStep*currentWidth);
+			if (d < w) {
 				// if distance between last point drawn and spline segment end point
 				// is below stroke step threshold,
 				// then skip over the segment entirely.
@@ -148,7 +168,7 @@ function DrawView(options) {
 			}
 			else {
 				//tempVert = curve(1.0);
-				if (distance(drawVertex, tempVert) == (kStrokeStep*currentWidth)) {
+				if (d == w) {
 					// else if distance between last point drawn and spline segment end point
 					// is equal to stroke step threshold,
 					// then skip the following loop to determine next point
@@ -156,12 +176,12 @@ function DrawView(options) {
 					tFinder=1.0;
 				}
 				else {
-					tempVert = curve(t);
-					if (distance(drawVertex, tempVert) < (kStrokeStep*currentWidth)) {
+					tempVert = curve(t, p0,p1,p2,p3,q0,q1,q2,q3);
+					if (distance(drawVertex, tempVert) < w) {
 						// if next spline point < distance threshold
 						// find the next point in range.
-						for (tFinder = kIncrement; distance(drawVertex, tempVert) < (kStrokeStep*currentWidth)&&t+tFinder<1.0; tFinder+=kIncrement) {
-							tempVert = curve(t+tFinder);
+						for (tFinder = kIncrement; distance(drawVertex, tempVert) < w && t+tFinder<1.0; tFinder+=kIncrement) {
+							tempVert = curve(t+tFinder, p0,p1,p2,p3,q0,q1,q2,q3);
 						}
 					}
 					else {
@@ -170,8 +190,8 @@ function DrawView(options) {
 					}
 				}
 				drawVertex = tempVert;
-				currentWidth = linearInterp(t, wStart, wEnd);
-				this.drawDot(drawVertex.x, drawVertex.y, currentWidth, arguments[2]);
+/* 				currentWidth = linearInterp(t, wStart, wEnd); */
+				this.drawDot(drawVertex.x, drawVertex.y, currentWidth, arguments[4]);
 			}
 		}
 	};
@@ -347,17 +367,13 @@ function DrawView(options) {
 							// queue > 5
 							// 0,1,2  3,4,5
 							vq.calculateTangent();
-							this.initializeCurve(vq.t1, vq.t2);
-							this.drawCurve(points[j-3], points[j-2]);
-							
+							this.drawCurve(points[j-3], points[j-2], vq.t1, vq.t2);
 							if (j == len-1){
 								vq.estimateEndPoints();
 								vq.calculateTangent();
-								this.initializeCurve(vq.t1, vq.t2);
-								this.drawCurve(points[j-2], points[j-1]);
+								this.drawCurve(points[j-2], points[j-1], vq.t1, vq.t2);
 								vq.calculateTangent();
-								this.initializeCurve(vq.t1, vq.t2);
-								this.drawCurve(points[j-1], points[j]);
+								this.drawCurve(points[j-1], points[j], vq.t1, vq.t2);
 							}
 						}
 					}
@@ -431,7 +447,7 @@ function DrawView(options) {
 				this.stroke.push({x:x, y:y, width:radius});
 			}
 			else if (sender.state == JSGestureRecognizerStateChanged) {
-				var points = vq.getPoints();
+				var points = vq.getPoints(), p;
 				var count = points.length;
 				if (count == 3) {
 					vq.estimateInitialTangent();
@@ -442,7 +458,6 @@ function DrawView(options) {
 					//
 					// Corner detection - do not remove knots if it is a corner.
 					//
-
 					var corner = 1.618, hasCorner = false, getAngle = this.getAngle;
 					for (var i=4; i<count; i++) {
 						for (var j=4; j<count; j++) {
@@ -468,7 +483,7 @@ function DrawView(options) {
 							// so the most efficient code for this is quite ugly.
 							var tension = 0.5, t2 = t*t, t3 = t*t2;
 							var l = (2*t3-3*t2+1), m = (-2*t3+3*t2), n = tension*(t3-2*t2+t), o = tension*(t3-t2);
-							return {x: a.x*l+b.x*m+(b.x-z.x)*n+(c.x-a.x)*o, y: a.y*l+b.y*m+(b.y-z.y)*n+(c.y-a.y)*o};
+							return {x: a.x*l + b.x*m + (b.x-z.x)*n + (c.x-a.x)*o, y: a.y*l+b.y*m+(b.y-z.y)*n+(c.y-a.y)*o};
 						}
 						var distancePrev = distance(points[5], points[6]),
 							t = distancePrev/(distancePrev+distance(points[6],points[7])),
@@ -497,67 +512,68 @@ function DrawView(options) {
 					points = vq.getPoints();
 					if (points.length > 8) {
 						vq.calculateTangent();
-						this.initializeCurve(vq.t1, vq.t2);
-						this.drawCurve({width:radius},{width:radius});
+/* 						p = this.initializeCurve(vq.t1, vq.t2); */
+						this.drawCurve(points[2], points[3], vq.t1, vq.t2);
 						this.stroke.push(points[2]);
 					}
 					
 				}
 				if (points.length > 7) {
-					// Draw to the temporary canvas
 					this.clearTemp();
-					var t1, t2, c = this.color;
-/* 					this.color = "rgba(255,0,0"; */
-					t1 = tangentForPoints(points[0], points[1], points[2], points[3], points[4]);
-					t2 = tangentForPoints(points[1], points[2], points[3], points[4], points[5]);
-					this.initializeCurve(t1, t2);
-					this.drawCurve( points[2], points[3], this.tempContext);
-					
-					t1 = t2
-					t2 = tangentForPoints(points[2], points[3], points[4], points[5], points[6]);
-					this.initializeCurve(t1, t2);
-					this.drawCurve( points[3], points[4], this.tempContext);
-					
-					t1 = t2
-					t2 = tangentForPoints(points[3], points[4], points[5], points[6], points[7]);
-					this.initializeCurve(t1, t2);
-					this.drawCurve( points[4], points[5], this.tempContext);
-					
-/* 					this.color = "rgba(0,255,0"; */
-					if (points.length > 8) {
-/*
-						t1 = t2
-						t2 = tangentForPoints(points[4], points[5], points[6], points[7], points[8]);
-						this.initializeCurve(t1, t2);
-						this.drawCurve( points[5], points[6], this.tempContext);
-*/
-						this.drawLine(points[7], points[8], this.tempContext);
-					}
-/* 					else */
-						this.drawLine(points[5], points[6], this.tempContext);
+					if (!(isAndroid || isMobileSafari)) {
+						// Draw to the temporary canvas
+						var t1, t2, c = this.color;
+	/* 					this.color = "rgba(255,0,0"; */
+						t1 = tangentForPoints(points[0], points[1], points[2], points[3], points[4]);
+						t2 = tangentForPoints(points[1], points[2], points[3], points[4], points[5]);
+	/* 					p = this.initializeCurve(t1, t2); */
+						this.drawCurve( points[2], points[3], t1, t2, this.tempContext);
 						
-					this.drawLine(points[6], points[7], this.tempContext);
-					
-/* 					this.color = c; */
-					
-/*
-					var radius = this.strokeRadius, color = this.color+",1)";
-					with (this.tempContext) {
-						lineWidth = radius;
-						strokeStyle = color;
-						beginPath();
-						//moveTo(points[2].x, points[2].y);
-						//lineTo(points[3].x, points[3].y);
-						//lineTo(points[4].x, points[4].y);
-						moveTo(points[5].x, points[5].y);
-						lineTo(points[6].x, points[6].y);
-						lineTo(points[7].x, points[7].y);
+						t1 = t2
+						t2 = tangentForPoints(points[2], points[3], points[4], points[5], points[6]);
+	/* 					p = this.initializeCurve(t1, t2); */
+						this.drawCurve( points[3], points[4], t1, t2, this.tempContext);
+						
+						t1 = t2
+						t2 = tangentForPoints(points[3], points[4], points[5], points[6], points[7]);
+	/* 					p = this.initializeCurve(t1, t2); */
+						this.drawCurve( points[4], points[5], t1, t2, this.tempContext);
+						
+	/* 					this.color = "rgba(0,255,0"; */
+						if (points.length > 8) {
+	/*
+							t1 = t2
+							t2 = tangentForPoints(points[4], points[5], points[6], points[7], points[8]);
+							this.initializeCurve(t1, t2);
+							this.drawCurve( points[5], points[6], this.tempContext);
+	*/
+							this.drawLine(points[7], points[8], this.tempContext);
+						}
+	/* 					else */
+							this.drawLine(points[5], points[6], this.tempContext);
+							
+						this.drawLine(points[6], points[7], this.tempContext);
+						
+	/* 					this.color = c; */
 					}
-					if (points.length==9)
-						this.tempContext.lineTo(points[8].x, points[8].y);
-					this.tempContext.stroke();
-					this.tempContext.closePath();
-*/
+					else {
+						var /* radius = this.strokeRadius, */ color = this.color+",1)";
+						with (this.tempContext) {
+							lineWidth = 1;//radius;
+							strokeStyle = color;
+							beginPath();
+							moveTo(points[2].x, points[2].y);
+							lineTo(points[3].x, points[3].y);
+							lineTo(points[4].x, points[4].y);
+							lineTo(points[5].x, points[5].y);
+							lineTo(points[6].x, points[6].y);
+							lineTo(points[7].x, points[7].y);
+						}
+						if (points.length==9)
+							this.tempContext.lineTo(points[8].x, points[8].y);
+						this.tempContext.stroke();
+						this.tempContext.closePath();
+					}
 				}
 				if (this.point !== undefined) {
 					// Plot raw data. This was for debugging
@@ -588,8 +604,8 @@ function DrawView(options) {
 					}
 					while (points.length > 5) {
 						vq.calculateTangent();
-						this.initializeCurve(vq.t1, vq.t2);
-						this.drawCurve({width:radius},{width:radius});
+/* 						p = this.initializeCurve(vq.t1, vq.t2); */
+						this.drawCurve(points[2],points[3], vq.t1, vq.t2);
 						this.stroke.push(points[2]);
 						points = vq.getPoints();
 					}
@@ -597,11 +613,11 @@ function DrawView(options) {
 						this.stroke.push(points[2],points[3],points[4]);
 						vq.estimateEndPoints();
 						vq.calculateTangent();
-						this.initializeCurve(vq.t1, vq.t2);
-						this.drawCurve({width:radius},{width:radius});
+/* 						p = this.initializeCurve(vq.t1, vq.t2); */
+						this.drawCurve(points[2],points[3], vq.t1, vq.t2);
 						vq.calculateTangent();
-						this.initializeCurve(vq.t1, vq.t2);
-						this.drawCurve({width:radius},{width:radius});
+/* 						p = this.initializeCurve(vq.t1, vq.t2); */
+						this.drawCurve(points[3],points[4], vq.t1, vq.t2);
 					}
 					else if (points.length > 2)
 						throw new Error("Internal error. points.length "+points.length+" should only be 1, 2 or 5.");

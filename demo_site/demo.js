@@ -37,7 +37,6 @@ $(document).ready(function(){
 		drawView.redo();
 	});
 	
-	
 	$("#newDoc").click(function(e){
 		drawView.loadNewDocument();
 	});
@@ -66,7 +65,6 @@ $(document).ready(function(){
 			}
 		});
 	});
-	
 	
 	$("#saveDocAs").click(function(){
 		$("body").append('<div class="modal hide fade" data-show=true id=saveDocDialog><div class="modal-header">Save Document<button type="button" class="close" data-dismiss=modal" aria-hidden="true">&times;</button></div><div  class="modal-body" >Enter name:<input id=saveDocName /></div><div class="modal-footer"><a href="#" class="btn" data-dismiss="modal">Cancel</a><a href="#" class="btn btn-primary">Save</a></div></div>');
