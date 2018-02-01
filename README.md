@@ -3,7 +3,7 @@ draw-view
 
 Smoothing drawing with HTML5 Canvas
 
-[View the demo](http://drawview.lxalumni.org)
+[View the demo](http://practicube.com/draw/index.html)
 
 ###Dependencies
 [jQuery](http://jquery.com/download/)
