@@ -1,0 +1,44 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "DrawDocument",
+  "description": "Schema for draw-view documents",
+  "type": "object",
+  "required": ["drawDocumentVersion"],
+  "properties": {
+    "drawDocumentVersion": {
+      "type": "string",
+      "enum": ["1.0"]
+    },
+    "name": {
+      "type": "string"
+    },
+    "strokes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["points", "color"],
+        "properties": {
+          "color": {
+            "type": "string"
+          },
+          "points": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["x", "y", "width"],
+              "properties": {
+                "x": { "type": "number" },
+                "y": { "type": "number" },
+                "width": { "type": "number" },
+                "removed": { "type": "boolean" }
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}
