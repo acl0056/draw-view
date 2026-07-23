@@ -1,20 +1,28 @@
-draw-view
-=========
+# draw-view
 
-Smoothing drawing with HTML5 Canvas
+A browser-based freehand drawing component that converts raw mouse or touch
+input into smooth HTML5 Canvas strokes in real time.
 
-[View the demo](http://practicube.com/draw/index.html)
+Rather than directly connecting every captured point, draw-view estimates local
+stroke tangents, constructs piecewise cubic curves, and removes redundant input
+points within a configurable error tolerance. Corner detection prevents sharp
+changes in direction from being smoothed away.
 
-###Dependencies
-[jQuery](http://jquery.com/download/)
+## Features
 
-[acl0056/JSGestureRecognizer](https://github.com/acl0056/JSGestureRecognizer)
+- Real-time smoothing while the user draws
+- Tangent-based piecewise cubic curve interpolation
+- Error-bounded reduction of redundant input points
+- Corner detection
+- Mouse and touch gesture support
+- Configurable stroke color and radius
+- Undo and redo
+- Serializable, versioned drawing documents
 
-[ArthurClemens/Javascript-Undo-Manager](https://github.com/ArthurClemens/Javascript-Undo-Manager)
+[View the demo](...)
 
-[acl0056/ui-basic](https://github.com/acl0056/ui-basic)
+## Project status
 
-####Not required, but the demo also uses:
-[acl0056/html5doc](https://github.com/acl0056/html5doc)
-
-[bootstrap](http://twitter.github.io/bootstrap/index.html)
+This is an older, stable experiment preserved in its original JavaScript and
+jQuery-based implementation. The demo interface is intentionally minimal; the
+main focus of the project is the live stroke-fitting and smoothing algorithm.
