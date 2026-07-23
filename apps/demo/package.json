@@ -1,7 +1,7 @@
 {
   "name": "draw-view-demo",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -9,8 +9,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@adamlockhart/draw-vue": "^1.0.0",
-    "@adamlockhart/document-engine": "^1.0.0",
+    "@adamlockhart/draw-vue": "^1.0.1",
+    "@adamlockhart/document-engine": "^1.0.1",
     "@ckpack/vue-color": "^1.6.0",
     "vue": "^3.5.16"
   },

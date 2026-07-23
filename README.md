@@ -1,28 +1,92 @@
 # draw-view
 
-A browser-based freehand drawing component that converts raw mouse or touch
-input into smooth HTML5 Canvas strokes in real time.
+A real-time stroke-smoothing and curve-fitting engine for HTML5 Canvas drawing.
 
-Rather than directly connecting every captured point, draw-view estimates local
-stroke tangents, constructs piecewise cubic curves, and removes redundant input
-points within a configurable error tolerance. Corner detection prevents sharp
-changes in direction from being smoothed away.
+Converts raw pointer input into smooth strokes using tangent-based piecewise
+cubic interpolation with error-bounded knot removal and corner detection.
+
+[Live demo](https://practicube.com/draw/index.html)
+
+## Packages
+
+| Package | Description |
+|---------|-------------|
+| [@adamlockhart/draw-view](https://www.npmjs.com/package/@adamlockhart/draw-view) | Framework-independent drawing engine |
+| [@adamlockhart/draw-vue](https://www.npmjs.com/package/@adamlockhart/draw-vue) | Vue 3 component wrapper |
+| [@adamlockhart/document-engine](https://www.npmjs.com/package/@adamlockhart/document-engine) | localStorage persistence with optional JSON Schema validation |
+
+## Install
+
+```sh
+npm install @adamlockhart/draw-view
+```
+
+Or with the Vue wrapper:
+
+```sh
+npm install @adamlockhart/draw-vue
+```
+
+## Usage (vanilla)
+
+```js
+import { DrawEngine } from '@adamlockhart/draw-view';
+
+const canvas = document.querySelector('canvas');
+const ctx = canvas.getContext('2d');
+const engine = new DrawEngine({ ctx });
+
+// Feed pointer events:
+engine.strokeStart(x, y);
+engine.strokeMove(x, y);
+engine.strokeEnd();
+```
+
+## Usage (Vue)
+
+```vue
+<template>
+  <DrawView
+    :width="800"
+    :height="600"
+    :color="{ r: 0, g: 0, b: 0 }"
+    :stroke-radius="3"
+    @stroke="onStroke"
+  />
+</template>
+
+<script setup>
+import { DrawView } from '@adamlockhart/draw-vue';
+
+function onStroke(stroke) {
+  console.log('completed stroke', stroke);
+}
+</script>
+```
 
 ## Features
 
 - Real-time smoothing while the user draws
 - Tangent-based piecewise cubic curve interpolation
 - Error-bounded reduction of redundant input points
-- Corner detection
-- Mouse and touch gesture support
+- Corner detection preserves sharp direction changes
 - Configurable stroke color and radius
-- Undo and redo
 - Serializable, versioned drawing documents
 
-[View the demo](https://practicube.com/draw/index.html)
+## Development
 
-## Project status
+```sh
+npm install
+npm run build        # build all packages
+npm run dev          # start the demo app
+```
 
-This is an older, stable experiment preserved in its original JavaScript and
-jQuery-based implementation. The demo interface is intentionally minimal; the
-main focus of the project is the live stroke-fitting and smoothing algorithm.
+## History
+
+Extracted from an older jQuery-based implementation into a framework-independent
+ES module. The original code is preserved in [`legacy/`](./legacy/). The
+smoothing algorithm is based on an earlier Objective-C iOS drawing app.
+
+## License
+
+MIT

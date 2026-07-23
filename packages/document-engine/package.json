@@ -1,6 +1,6 @@
 {
   "name": "@adamlockhart/document-engine",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "localStorage document persistence with optional JSON Schema validation",
   "type": "module",
   "main": "./dist/document-engine.umd.cjs",
