@@ -1,0 +1,20 @@
+{
+  "name": "draw-view-monorepo",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "lint": "eslint .",
+    "build": "npm run build --workspaces",
+    "dev": "npm run dev -w draw-view-demo"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.28.0",
+    "eslint": "^9.28.0",
+    "globals": "^16.1.0",
+    "@stylistic/eslint-plugin": "^4.4.1"
+  }
+}

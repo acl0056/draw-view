@@ -19,7 +19,7 @@ changes in direction from being smoothed away.
 - Undo and redo
 - Serializable, versioned drawing documents
 
-[View the demo](...)
+[View the demo](https://practicube.com/draw/index.html)
 
 ## Project status
 
