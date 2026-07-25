@@ -1,42 +1,83 @@
 <template>
-  <canvas
-    ref="canvasRef"
-    :width="width"
-    :height="height"
-    :style="{ touchAction: 'none', backgroundColor: backgroundColor }"
-    @pointerdown="onPointerDown"
-    @pointermove="onPointerMove"
-    @pointerup="onPointerUp"
-    @pointercancel="onPointerUp"
-  />
+  <div
+    class="draw-view"
+    :style="{ position: 'relative', width: `${width}px`, height: `${height}px` }"
+  >
+    <canvas
+      ref="baseCanvas"
+      :width="width"
+      :height="height"
+      :style="{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        backgroundColor,
+      }"
+    />
+    <canvas
+      ref="tempCanvas"
+      :width="width"
+      :height="height"
+      :style="{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        touchAction: 'none',
+      }"
+      @pointerdown="onPointerDown"
+      @pointermove="onPointerMove"
+      @pointerup="onPointerUp"
+      @pointercancel="onPointerUp"
+    />
+  </div>
 </template>
 
 <script setup>
-import { ref, onMounted, watch, shallowRef } from 'vue';
+import {
+  ref, onMounted, watch, shallowRef,
+} from 'vue';
 import { DrawEngine } from '@adamlockhart/draw-view';
 
 const props = defineProps({
   width: { type: Number, default: 800 },
   height: { type: Number, default: 600 },
   strokeRadius: { type: Number, default: 3 },
-  maxError: { type: Number, default: 5 },
+  maxError: { type: Number, default: 1 },
   color: { type: Object, default: () => ({ r: 0, g: 0, b: 0 }) },
   backgroundColor: { type: String, default: 'white' },
+  // Cap on how many coalesced points to process per pointermove. Sits above
+  // any realistic per-frame batch, so normal drawing is never decimated; it
+  // only engages to tame a runaway batch after a main-thread stall.
+  maxPointsPerMove: { type: Number, default: 50 },
+  // When true, read PointerEvent.getCoalescedEvents() and feed all (decimated)
+  // points per move. When false (default), process a single point per event.
+  coalesceInput: { type: Boolean, default: false },
+  // When true, the engine skips its inline preview and we repaint the preview
+  // overlay once per move via renderPreview(). When false (default), the engine
+  // draws the preview inline on every point.
+  decoupledPreview: { type: Boolean, default: false },
+  // Debug: overlay a marker at each fitted point.
+  debugPoints: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['stroke']);
 
-const canvasRef = ref(null);
+const baseCanvas = ref(null);
+const tempCanvas = ref(null);
 const engine = shallowRef(null);
 let isDrawing = false;
 
 onMounted(() => {
-  const ctx = canvasRef.value.getContext('2d');
+  const ctx = baseCanvas.value.getContext('2d');
+  const tempCtx = tempCanvas.value.getContext('2d');
   engine.value = new DrawEngine({
     ctx,
+    tempCtx,
     strokeRadius: props.strokeRadius,
     maxError: props.maxError,
     color: props.color,
+    decoupledPreview: props.decoupledPreview,
+    debugPoints: props.debugPoints,
   });
 });
 
@@ -52,18 +93,60 @@ watch(() => props.maxError, (e) => {
   if (engine.value) engine.value.maxError = e;
 });
 
+watch(() => props.debugPoints, (v) => {
+  if (!engine.value) return;
+  engine.value.debugPoints = v;
+  engine.value.redraw();
+});
+
+function pointerPos(e) {
+  const rect = tempCanvas.value.getBoundingClientRect();
+  return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+}
+
 function onPointerDown(e) {
   if (e.button !== 0) return;
   isDrawing = true;
-  canvasRef.value.setPointerCapture(e.pointerId);
-  const rect = canvasRef.value.getBoundingClientRect();
-  engine.value.strokeStart(e.clientX - rect.left, e.clientY - rect.top);
+  tempCanvas.value.setPointerCapture(e.pointerId);
+  const { x, y } = pointerPos(e);
+  engine.value.strokeStart(x, y);
 }
 
 function onPointerMove(e) {
   if (!isDrawing) return;
-  const rect = canvasRef.value.getBoundingClientRect();
-  engine.value.strokeMove(e.clientX - rect.left, e.clientY - rect.top);
+  const rect = tempCanvas.value.getBoundingClientRect();
+  const move = (ev) => engine.value.strokeMove(ev.clientX - rect.left, ev.clientY - rect.top);
+
+  if (props.coalesceInput) {
+    // The browser throttles pointermove delivery but samples input at a higher
+    // rate. getCoalescedEvents() returns the intermediate points captured
+    // between delivered events, which matters most on mobile and high-refresh
+    // displays. Fall back to the event itself where unsupported.
+    let events = typeof e.getCoalescedEvents === 'function'
+      ? e.getCoalescedEvents()
+      : [e];
+    if (!events.length) events = [e];
+
+    // Decimate large batches to at most maxPointsPerMove so per-frame work
+    // stays bounded. stride is 1 for normal-sized batches (no decimation).
+    const stride = Math.max(1, Math.ceil(events.length / props.maxPointsPerMove));
+    const lastIndex = events.length - 1;
+    for (let i = 0; i < events.length; i += stride) {
+      move(events[i]);
+    }
+    // Always process the most recent sample so the ink stays at the fingertip.
+    if (lastIndex % stride !== 0) {
+      move(events[lastIndex]);
+    }
+  } else {
+    move(e);
+  }
+
+  // When the preview is decoupled from strokeMove, repaint it once here.
+  // Otherwise strokeMove already drew it inline.
+  if (props.decoupledPreview) {
+    engine.value.renderPreview();
+  }
 }
 
 function onPointerUp() {

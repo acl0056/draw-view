@@ -1,6 +1,6 @@
 {
   "name": "@adamlockhart/draw-vue",
-  "version": "1.0.1",
+  "version": "1.2.0",
   "description": "Vue 3 component wrapper for @adamlockhart/draw-view",
   "type": "module",
   "main": "./dist/draw-vue.umd.cjs",
@@ -19,7 +19,7 @@
     "dev": "vite build --watch"
   },
   "dependencies": {
-    "@adamlockhart/draw-view": "^1.0.0"
+    "@adamlockhart/draw-view": "^1.2.0"
   },
   "peerDependencies": {
     "vue": "^3.4.0"

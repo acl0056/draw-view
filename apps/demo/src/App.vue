@@ -37,14 +37,18 @@
       <button class="nav-btn" @click="redo">redo</button>
     </nav>
 
-    <DrawView
-      ref="drawView"
-      :width="canvasWidth"
-      :height="canvasHeight"
-      :color="currentColor"
-      :stroke-radius="strokeRadius"
-      @stroke="onStroke"
-    />
+    <div class="canvas-wrap" ref="canvasWrap">
+      <DrawView
+        ref="drawView"
+        :width="canvasWidth"
+        :height="canvasHeight"
+        :color="currentColor"
+        :stroke-radius="strokeRadius"
+        :coalesce-input="true"
+        :decoupled-preview="true"
+        @stroke="onStroke"
+      />
+    </div>
 
     <!-- Open dialog -->
     <div v-if="showOpenDialog" class="modal-backdrop" @click="showOpenDialog = false">
@@ -91,6 +95,7 @@ const strokeRadius = ref(3);
 const canvasWidth = ref(800);
 const canvasHeight = ref(600);
 const drawView = ref(null);
+const canvasWrap = ref(null);
 const openMenu = ref(null);
 const currentDocName = ref(null);
 
@@ -200,19 +205,27 @@ function confirmSave() {
 }
 
 // --- Resize ---
+// Measure the actual container rather than window.innerHeight, which is
+// unreliable on mobile with dynamic browser chrome.
 function resize() {
-  canvasWidth.value = window.innerWidth;
-  canvasHeight.value = window.innerHeight - 40;
+  const el = canvasWrap.value;
+  if (!el) return;
+  canvasWidth.value = el.clientWidth;
+  canvasHeight.value = el.clientHeight;
 }
 
 onMounted(() => {
   resize();
   window.addEventListener('resize', resize);
+  window.addEventListener('orientationchange', resize);
+  window.visualViewport?.addEventListener('resize', resize);
   document.addEventListener('click', closeMenus);
 });
 
 onUnmounted(() => {
   window.removeEventListener('resize', resize);
+  window.removeEventListener('orientationchange', resize);
+  window.visualViewport?.removeEventListener('resize', resize);
   document.removeEventListener('click', closeMenus);
 });
 </script>
@@ -221,7 +234,14 @@ onUnmounted(() => {
 .app {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100vh; /* fallback */
+  height: 100dvh; /* matches visible viewport as mobile chrome shows/hides */
+  overflow: hidden;
+}
+
+.canvas-wrap {
+  flex: 1;
+  min-height: 0;
   overflow: hidden;
 }
 
