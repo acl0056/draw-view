@@ -13,7 +13,7 @@ export default defineConfig({
       external: ['vue', '@adamlockhart/draw-view'],
       output: {
         globals: {
-          vue: 'Vue',
+          'vue': 'Vue',
           '@adamlockhart/draw-view': 'DrawView',
         },
       },

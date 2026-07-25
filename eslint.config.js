@@ -31,8 +31,8 @@ export default [
       ],
       'no-continue': 'off',
       'no-underscore-dangle': 'off',
-      curly: ['error', 'multi-line'],
-      eqeqeq: ['error', 'always'],
+      'curly': ['error', 'multi-line'],
+      'eqeqeq': ['error', 'always'],
 
       // Stylistic overrides to match Airbnb
       '@stylistic/indent': ['error', 2],
@@ -40,6 +40,15 @@ export default [
       '@stylistic/semi': ['error', 'always'],
       '@stylistic/comma-dangle': ['error', 'always-multiline'],
       '@stylistic/arrow-parens': ['error', 'always'],
+    },
+  },
+  {
+    // Node-context files (build config, deploy scripts) need Node globals.
+    files: ['**/*.config.js', 'deploy/**/*.js'],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+      },
     },
   },
   {
