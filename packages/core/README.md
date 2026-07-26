@@ -43,9 +43,10 @@ const stroke = engine.strokeEnd();
 ### Methods
 
 - `strokeStart(x, y)` — begin a stroke
-- `strokeMove(x, y)` — continue a stroke
+- `strokeMove(x, y)` — continue a stroke (ingest a point and commit finalized segments)
 - `strokeEnd()` — finish a stroke, returns the completed stroke object
 - `strokeTap(x, y)` — draw a single dot
+- `renderPreview()` — repaint the live preview overlay (call once per frame after feeding points; requires `tempCtx`)
 - `setColor(r, g, b)` — change stroke color
 - `redraw()` — clear and re-render all strokes
 - `clear()` — clear canvas and reset document

@@ -64,7 +64,8 @@ class VertexQueue {
     const q = this.queue;
     if (q.length) {
       if (distance(obj, q[q.length - 1]) > 1) q.push(obj);
-    } else {
+    }
+    else {
       q.push(obj);
     }
   }
@@ -72,7 +73,7 @@ class VertexQueue {
   getCount() {
     let count = 0;
     for (const p of this.queue) {
-      if (!p.removed) count++;
+      if (!p.removed) count += 1;
     }
     return count;
   }
@@ -97,8 +98,9 @@ class VertexQueue {
     for (const p of this.queue) {
       if (p.removed) {
         if (notRemoved === 6) arr.push(p);
-      } else {
-        notRemoved++;
+      }
+      else {
+        notRemoved += 1;
       }
     }
     return arr;
@@ -145,14 +147,26 @@ export class DrawEngine {
   /**
    * @param {object} options
    * @param {CanvasRenderingContext2D} options.ctx - main canvas context
+   * @param {CanvasRenderingContext2D} [options.tempCtx] - optional overlay
+   *   context for live, semi-transparent previews of the un-committed tail
    * @param {number} [options.strokeRadius=3]
-   * @param {number} [options.maxError=5]
+   * @param {number} [options.maxError=1]
    * @param {{r:number, g:number, b:number}} [options.color={r:0,g:0,b:0}]
+   * @param {boolean} [options.decoupledPreview=false] - if true, strokeMove
+   *   skips inline preview; caller drives renderPreview()
    */
   constructor(options) {
     this.ctx = options.ctx;
+    this.tempCtx = options.tempCtx ?? null;
     this.strokeRadius = options.strokeRadius ?? 3;
-    this.maxError = options.maxError ?? 5;
+    this.maxError = options.maxError ?? 1;
+    // When false (default), strokeMove draws the live preview inline on every
+    // point (original behavior). When true, strokeMove skips the preview and
+    // the caller is responsible for calling renderPreview() once per frame.
+    this.decoupledPreview = options.decoupledPreview ?? false;
+    // Debug: when true, committed re-fit overlays a marker at each fitted point
+    // so we can see where the points actually are relative to the curve.
+    this.debugPoints = options.debugPoints ?? false;
     this.setColor(options.color?.r ?? 0, options.color?.g ?? 0, options.color?.b ?? 0);
 
     this._vq = new VertexQueue();
@@ -174,6 +188,7 @@ export class DrawEngine {
   strokeStart(x, y) {
     const radius = this.strokeRadius;
     const point = { x, y, width: radius, removed: false };
+    this._clearTemp();
     this._vq.push(point);
     this._drawDot(x, y, radius, this.ctx);
     this._stroke = [{ x, y, width: radius }];
@@ -190,22 +205,25 @@ export class DrawEngine {
     const vq = this._vq;
     vq.push(point);
 
-    const points = vq.getPoints();
+    let points = vq.getPoints();
     const count = points.length;
 
     if (count === 3) {
       vq.estimateInitialTangent();
-    } else if (count > 8) {
-      // Corner detection
+    }
+    else if (count > 8) {
+      // Corner detection.
+      //
+      // The original implementation used a triple-nested loop over i/j/k, but
+      // the tested condition only ever depends on i (j and k were unused). The
+      // inner loops merely gated whether the body ran, which is true exactly
+      // when i <= count - 3 (keeping points[i + 2] in bounds). This single loop
+      // is behaviorally identical to the original but O(n) instead of O(n^3).
       const corner = 1.618;
       let hasCorner = false;
-      for (let i = 4; i < count && !hasCorner; i++) {
-        for (let j = i + 1; j < count && !hasCorner; j++) {
-          for (let k = j + 1; k < count && !hasCorner; k++) {
-            if (getAngle(points[i], points[i + 1], points[i + 2]) >= corner) {
-              hasCorner = true;
-            }
-          }
+      for (let i = 4; i < count - 2 && !hasCorner; i += 1) {
+        if (getAngle(points[i], points[i + 1], points[i + 2]) >= corner) {
+          hasCorner = true;
         }
       }
 
@@ -238,12 +256,37 @@ export class DrawEngine {
         if (removeKnot) points[6].removed = true;
       }
 
-      const refreshedPoints = vq.getPoints();
-      if (refreshedPoints.length > 8) {
+      points = vq.getPoints();
+      if (points.length > 8) {
         vq.calculateTangent();
-        this._drawCurve(refreshedPoints[2], refreshedPoints[3], vq.t1, vq.t2, this.ctx);
-        this._stroke.push(refreshedPoints[2]);
+        this._drawCurve(points[2], points[3], vq.t1, vq.t2, this.ctx);
+        this._stroke.push(points[2]);
       }
+    }
+
+    // Inline preview (original behavior). Skipped when the caller opts into
+    // decoupled preview and drives renderPreview() itself.
+    if (!this.decoupledPreview && this.tempCtx && points.length > 7) {
+      this._drawPreview(points);
+    }
+  }
+
+  /**
+   * Render the live, semi-transparent preview of the un-committed tail to the
+   * temp overlay, reflecting the current queue state.
+   *
+   * This is decoupled from strokeMove so callers feeding many points per frame
+   * (e.g. from PointerEvent.getCoalescedEvents) can ingest all of them but
+   * repaint the preview only once per frame. No-op without a temp context.
+   */
+  renderPreview() {
+    if (!this.tempCtx) return;
+    const points = this._vq.getPoints();
+    if (points.length > 7) {
+      this._drawPreview(points);
+    }
+    else {
+      this._clearTemp();
     }
   }
 
@@ -256,7 +299,8 @@ export class DrawEngine {
 
     if (points.length === 2) {
       this._drawLine(points[0], points[1], this.ctx);
-    } else if (points.length === 3) {
+    }
+    else if (points.length === 3) {
       vq.estimateInitialTangent();
       points = vq.getPoints();
     }
@@ -284,6 +328,10 @@ export class DrawEngine {
 
     this._stroke = [];
     vq.reset();
+    this._clearTemp();
+
+    // Debug: re-render so the just-finished stroke shows its point markers.
+    if (this.debugPoints) this.redraw();
 
     return stroke;
   }
@@ -370,14 +418,49 @@ export class DrawEngine {
   // --- Private rendering methods ---
 
   _drawDot(x, y, radius, ctx) {
+    const isTemp = ctx === this.tempCtx;
     const grd = ctx.createRadialGradient(x, y, 0, x, y, radius);
-    grd.addColorStop(0, this._colorPrefix + ',1)');
-    grd.addColorStop(1, this._colorPrefix + ',0)');
+    grd.addColorStop(0, this._colorPrefix + (isTemp ? ',0.333)' : ',1)'));
+    grd.addColorStop(1, `${this._colorPrefix},0)`);
     ctx.fillStyle = grd;
     ctx.beginPath();
     ctx.arc(x, y, radius * 2, 0, 2 * Math.PI, false);
     ctx.fill();
     ctx.closePath();
+  }
+
+  _clearTemp() {
+    if (!this.tempCtx) return;
+    const canvas = this.tempCtx.canvas;
+    this.tempCtx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+
+  /**
+   * Render the trailing, not-yet-finalized points to the temp overlay so the
+   * user sees a live preview of the stroke ahead of the committed curve.
+   * @param {object[]} points - current non-removed queue points
+   */
+  _drawPreview(points) {
+    this._clearTemp();
+    const ctx = this.tempCtx;
+
+    let t1 = tangentForPoints(points[0], points[1], points[2], points[3], points[4]);
+    let t2 = tangentForPoints(points[1], points[2], points[3], points[4], points[5]);
+    this._drawCurve(points[2], points[3], t1, t2, ctx);
+
+    t1 = t2;
+    t2 = tangentForPoints(points[2], points[3], points[4], points[5], points[6]);
+    this._drawCurve(points[3], points[4], t1, t2, ctx);
+
+    t1 = t2;
+    t2 = tangentForPoints(points[3], points[4], points[5], points[6], points[7]);
+    this._drawCurve(points[4], points[5], t1, t2, ctx);
+
+    if (points.length > 8) {
+      this._drawLine(points[7], points[8], ctx);
+    }
+    this._drawLine(points[5], points[6], ctx);
+    this._drawLine(points[6], points[7], ctx);
   }
 
   _drawCurve(vStart, vEnd, t1, t2, ctx) {
@@ -406,9 +489,11 @@ export class DrawEngine {
 
       if (d < w) {
         tFinder = 1.0;
-      } else if (d === w) {
+      }
+      else if (d === w) {
         tFinder = 1.0;
-      } else {
+      }
+      else {
         const t2v = t * t;
         const t3v = t2v * t;
         tempVert = { x: p0 + p1 * t + p2 * t2v + p3 * t3v, y: q0 + q1 * t + q2 * t2v + q3 * t3v };
@@ -419,7 +504,8 @@ export class DrawEngine {
             const tf3 = tf2 * tf;
             tempVert = { x: p0 + p1 * tf + p2 * tf2 + p3 * tf3, y: q0 + q1 * tf + q2 * tf2 + q3 * tf3 };
           }
-        } else {
+        }
+        else {
           tFinder = kIncrement;
         }
         drawVertex = tempVert;
@@ -446,9 +532,11 @@ export class DrawEngine {
 
       if (d < w) {
         tFinder = 1.0;
-      } else if (d === w) {
+      }
+      else if (d === w) {
         tFinder = 1.0;
-      } else {
+      }
+      else {
         tempVert = {
           x: vStart.x + (vEnd.x - vStart.x) * t,
           y: vStart.y + (vEnd.y - vStart.y) * t,
@@ -461,7 +549,8 @@ export class DrawEngine {
               y: vStart.y + (vEnd.y - vStart.y) * tf,
             };
           }
-        } else {
+        }
+        else {
           tFinder = kIncrement;
         }
         drawVertex = { x: tempVert.x, y: tempVert.y };
@@ -479,7 +568,8 @@ export class DrawEngine {
       // Just dots or short lines
       if (points.length === 1) {
         this._drawDot(points[0].x, points[0].y, points[0].width, this.ctx);
-      } else {
+      }
+      else {
         for (let i = 0; i < points.length - 1; i++) {
           this._drawLine(points[i], points[i + 1], this.ctx);
         }
@@ -492,7 +582,8 @@ export class DrawEngine {
       vq.push(points[j]);
       if (j === 3) {
         vq.estimateInitialTangent();
-      } else if (j > 3) {
+      }
+      else if (j > 3) {
         vq.calculateTangent();
         this._drawCurve(points[j - 3], points[j - 2], vq.t1, vq.t2, this.ctx);
         if (j === points.length - 1) {
@@ -504,5 +595,24 @@ export class DrawEngine {
         }
       }
     }
+
+    // Debug: overlay markers at the FITTED points (after render reduction) so
+    // we can see the taper effect — dense at the ends, sparse in the middle.
+    // The first point is drawn larger so the start is easy to spot.
+    if (this.debugPoints) {
+      for (let i = 0; i < points.length; i += 1) {
+        this._drawMarker(points[i].x, points[i].y, i === 0 ? 4 : 2);
+      }
+    }
+  }
+
+  _drawMarker(x, y, radius) {
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.fillStyle = 'rgba(255,0,0,0.85)';
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, 2 * Math.PI, false);
+    ctx.fill();
+    ctx.restore();
   }
 }
