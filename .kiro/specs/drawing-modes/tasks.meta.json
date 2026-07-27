@@ -1,0 +1,489 @@
+{
+  "pbtResults": {
+    "10.2 Write mode-isolation property tests": {
+      "status": "passed",
+      "lastRunTimestamp": 1785034057983
+    },
+    "10.3 Write backward-compatibility property tests": {
+      "status": "passed",
+      "lastRunTimestamp": 1785034153078
+    },
+    "10.1 Write round-trip fidelity property tests": {
+      "status": "passed",
+      "lastRunTimestamp": 1785034185534
+    }
+  },
+  "executionHistory": {
+    "1.1 Add and configure a test runner": [
+      {
+        "executionId": "cf089ec7-5415-446a-8c3c-6f242b4dfcb4",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785025671088
+      },
+      {
+        "executionId": "cf089ec7-5415-446a-8c3c-6f242b4dfcb4",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785025682420
+      },
+      {
+        "executionId": "fdf749eb-8c7d-40e5-b00c-b25d7b5b4b58",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785026910468
+      }
+    ],
+    "1.2 Define the DrawingMode strategy contract and Mode Registry": [
+      {
+        "executionId": "cf089ec7-5415-446a-8c3c-6f242b4dfcb4",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785025671227
+      },
+      {
+        "executionId": "cf089ec7-5415-446a-8c3c-6f242b4dfcb4",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785025682942
+      },
+      {
+        "executionId": "fdf749eb-8c7d-40e5-b00c-b25d7b5b4b58",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785026911314
+      }
+    ],
+    "1.3 Write unit tests for registry resolution": [
+      {
+        "executionId": "cf089ec7-5415-446a-8c3c-6f242b4dfcb4",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785025671444
+      },
+      {
+        "executionId": "fdf749eb-8c7d-40e5-b00c-b25d7b5b4b58",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785026916996
+      },
+      {
+        "executionId": "88081a59-0d2d-4c97-ab74-e1e21405a33c",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785028291825
+      }
+    ],
+    "2.1 Extract ClassicSmoothingMode without changing output": [
+      {
+        "executionId": "cf089ec7-5415-446a-8c3c-6f242b4dfcb4",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785025671557
+      },
+      {
+        "executionId": "fdf749eb-8c7d-40e5-b00c-b25d7b5b4b58",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785026917800
+      },
+      {
+        "executionId": "88081a59-0d2d-4c97-ab74-e1e21405a33c",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785028292461
+      }
+    ],
+    "2.2 Refactor DrawEngine to delegate to the active mode": [
+      {
+        "executionId": "cf089ec7-5415-446a-8c3c-6f242b4dfcb4",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785025671675
+      },
+      {
+        "executionId": "88081a59-0d2d-4c97-ab74-e1e21405a33c",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785028299095
+      },
+      {
+        "executionId": "88081a59-0d2d-4c97-ab74-e1e21405a33c",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785028509164
+      }
+    ],
+    "2.3 Write golden-master parity test for the Classic extraction": [
+      {
+        "executionId": "cf089ec7-5415-446a-8c3c-6f242b4dfcb4",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785025671792
+      },
+      {
+        "executionId": "88081a59-0d2d-4c97-ab74-e1e21405a33c",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785028513039
+      },
+      {
+        "executionId": "88081a59-0d2d-4c97-ab74-e1e21405a33c",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785028851009
+      }
+    ],
+    "2.4 Write unit tests for mode selection API": [
+      {
+        "executionId": "cf089ec7-5415-446a-8c3c-6f242b4dfcb4",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785025671974
+      },
+      {
+        "executionId": "88081a59-0d2d-4c97-ab74-e1e21405a33c",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785028514126
+      },
+      {
+        "executionId": "88081a59-0d2d-4c97-ab74-e1e21405a33c",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785028851079
+      }
+    ],
+    "3. Checkpoint - Classic parity and seam": [
+      {
+        "executionId": "cf089ec7-5415-446a-8c3c-6f242b4dfcb4",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785025672091
+      },
+      {
+        "executionId": "88081a59-0d2d-4c97-ab74-e1e21405a33c",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785031453998
+      }
+    ],
+    "4.1 Implement the Square Bezier mode": [
+      {
+        "executionId": "cf089ec7-5415-446a-8c3c-6f242b4dfcb4",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785025672218
+      },
+      {
+        "executionId": "88081a59-0d2d-4c97-ab74-e1e21405a33c",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785028514875
+      },
+      {
+        "executionId": "88081a59-0d2d-4c97-ab74-e1e21405a33c",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785028851415
+      }
+    ],
+    "4.2 Write unit tests for SquareBezierMode": [
+      {
+        "executionId": "cf089ec7-5415-446a-8c3c-6f242b4dfcb4",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785025672327
+      },
+      {
+        "executionId": "88081a59-0d2d-4c97-ab74-e1e21405a33c",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785028865331
+      },
+      {
+        "executionId": "88081a59-0d2d-4c97-ab74-e1e21405a33c",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785031428894
+      }
+    ],
+    "5.1 Add the perfect-freehand runtime dependency": [
+      {
+        "executionId": "cf089ec7-5415-446a-8c3c-6f242b4dfcb4",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785025672441
+      },
+      {
+        "executionId": "88081a59-0d2d-4c97-ab74-e1e21405a33c",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785028866053
+      },
+      {
+        "executionId": "88081a59-0d2d-4c97-ab74-e1e21405a33c",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785031429765
+      }
+    ],
+    "5.2 Implement the perfect-freehand mode": [
+      {
+        "executionId": "cf089ec7-5415-446a-8c3c-6f242b4dfcb4",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785025672608
+      },
+      {
+        "executionId": "88081a59-0d2d-4c97-ab74-e1e21405a33c",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785031454932
+      },
+      {
+        "executionId": "88081a59-0d2d-4c97-ab74-e1e21405a33c",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785031670420
+      }
+    ],
+    "5.3 Write unit tests for PerfectFreehandMode": [
+      {
+        "executionId": "cf089ec7-5415-446a-8c3c-6f242b4dfcb4",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785025672726
+      },
+      {
+        "executionId": "88081a59-0d2d-4c97-ab74-e1e21405a33c",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785031674901
+      },
+      {
+        "executionId": "88081a59-0d2d-4c97-ab74-e1e21405a33c",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785031857951
+      }
+    ],
+    "6. Checkpoint - All three modes": [
+      {
+        "executionId": "cf089ec7-5415-446a-8c3c-6f242b4dfcb4",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785025672842
+      },
+      {
+        "executionId": "88081a59-0d2d-4c97-ab74-e1e21405a33c",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785031864046
+      }
+    ],
+    "7.1 Bump the document model and tag strokes": [
+      {
+        "executionId": "cf089ec7-5415-446a-8c3c-6f242b4dfcb4",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785025673028
+      },
+      {
+        "executionId": "88081a59-0d2d-4c97-ab74-e1e21405a33c",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785031675687
+      },
+      {
+        "executionId": "88081a59-0d2d-4c97-ab74-e1e21405a33c",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785031857350
+      }
+    ],
+    "7.2 Route replay through per-stroke modes": [
+      {
+        "executionId": "cf089ec7-5415-446a-8c3c-6f242b4dfcb4",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785025673162
+      },
+      {
+        "executionId": "88081a59-0d2d-4c97-ab74-e1e21405a33c",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785031864909
+      },
+      {
+        "executionId": "88081a59-0d2d-4c97-ab74-e1e21405a33c",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785031933090
+      }
+    ],
+    "7.3 Write unit tests for versioning and routing": [
+      {
+        "executionId": "cf089ec7-5415-446a-8c3c-6f242b4dfcb4",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785025673292
+      },
+      {
+        "executionId": "88081a59-0d2d-4c97-ab74-e1e21405a33c",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785031938374
+      },
+      {
+        "executionId": "88081a59-0d2d-4c97-ab74-e1e21405a33c",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785032258646
+      }
+    ],
+    "8.1 Extend the schema in lockstep with the model": [
+      {
+        "executionId": "cf089ec7-5415-446a-8c3c-6f242b4dfcb4",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785025673408
+      },
+      {
+        "executionId": "88081a59-0d2d-4c97-ab74-e1e21405a33c",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785031937393
+      },
+      {
+        "executionId": "88081a59-0d2d-4c97-ab74-e1e21405a33c",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785032257940
+      }
+    ],
+    "8.2 Write schema validation tests": [
+      {
+        "executionId": "cf089ec7-5415-446a-8c3c-6f242b4dfcb4",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785025673515
+      },
+      {
+        "executionId": "88081a59-0d2d-4c97-ab74-e1e21405a33c",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785032264479
+      },
+      {
+        "executionId": "88081a59-0d2d-4c97-ab74-e1e21405a33c",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785033917776
+      }
+    ],
+    "9.1 Add the DrawView mode prop and pressure forwarding": [
+      {
+        "executionId": "cf089ec7-5415-446a-8c3c-6f242b4dfcb4",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785025673626
+      },
+      {
+        "executionId": "88081a59-0d2d-4c97-ab74-e1e21405a33c",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785032265497
+      },
+      {
+        "executionId": "88081a59-0d2d-4c97-ab74-e1e21405a33c",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785033918886
+      }
+    ],
+    "9.2 Add the demo mode dropdown": [
+      {
+        "executionId": "cf089ec7-5415-446a-8c3c-6f242b4dfcb4",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785025673805
+      },
+      {
+        "executionId": "88081a59-0d2d-4c97-ab74-e1e21405a33c",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785032266488
+      },
+      {
+        "executionId": "88081a59-0d2d-4c97-ab74-e1e21405a33c",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785033919591
+      }
+    ],
+    "10.1 Write round-trip fidelity property tests": [
+      {
+        "executionId": "cf089ec7-5415-446a-8c3c-6f242b4dfcb4",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785025673911
+      },
+      {
+        "executionId": "88081a59-0d2d-4c97-ab74-e1e21405a33c",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785033924387
+      },
+      {
+        "executionId": "88081a59-0d2d-4c97-ab74-e1e21405a33c",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785034203967
+      }
+    ],
+    "10.2 Write mode-isolation property tests": [
+      {
+        "executionId": "cf089ec7-5415-446a-8c3c-6f242b4dfcb4",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785025674025
+      },
+      {
+        "executionId": "88081a59-0d2d-4c97-ab74-e1e21405a33c",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785033925004
+      },
+      {
+        "executionId": "88081a59-0d2d-4c97-ab74-e1e21405a33c",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785034204901
+      }
+    ],
+    "10.3 Write backward-compatibility property tests": [
+      {
+        "executionId": "cf089ec7-5415-446a-8c3c-6f242b4dfcb4",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785025674141
+      },
+      {
+        "executionId": "88081a59-0d2d-4c97-ab74-e1e21405a33c",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785033926054
+      },
+      {
+        "executionId": "88081a59-0d2d-4c97-ab74-e1e21405a33c",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785034205783
+      }
+    ],
+    "11. Final checkpoint - Ensure all tests pass": [
+      {
+        "executionId": "cf089ec7-5415-446a-8c3c-6f242b4dfcb4",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785025674257
+      },
+      {
+        "executionId": "88081a59-0d2d-4c97-ab74-e1e21405a33c",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785034212667
+      },
+      {
+        "executionId": "88081a59-0d2d-4c97-ab74-e1e21405a33c",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785034293578
+      }
+    ],
+    "1. Set up test tooling and the drawing-mode strategy seam": [
+      {
+        "executionId": "88081a59-0d2d-4c97-ab74-e1e21405a33c",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785028291940
+      }
+    ],
+    "2. Extract Classic mode and add the engine delegation seam": [
+      {
+        "executionId": "88081a59-0d2d-4c97-ab74-e1e21405a33c",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785028851198
+      }
+    ],
+    "4. Implement SquareBezierMode": [
+      {
+        "executionId": "88081a59-0d2d-4c97-ab74-e1e21405a33c",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785031429017
+      }
+    ],
+    "5. Implement PerfectFreehandMode": [
+      {
+        "executionId": "88081a59-0d2d-4c97-ab74-e1e21405a33c",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785031858065
+      }
+    ],
+    "7. Document versioning, tagging, and replay routing": [
+      {
+        "executionId": "88081a59-0d2d-4c97-ab74-e1e21405a33c",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785032258780
+      }
+    ],
+    "8. Update the draw-document JSON schema": [
+      {
+        "executionId": "88081a59-0d2d-4c97-ab74-e1e21405a33c",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785033918093
+      }
+    ],
+    "9. Wire mode selection through DrawView and the demo": [
+      {
+        "executionId": "88081a59-0d2d-4c97-ab74-e1e21405a33c",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785033919719
+      }
+    ],
+    "10. Property-based tests": [
+      {
+        "executionId": "88081a59-0d2d-4c97-ab74-e1e21405a33c",
+        "chatSessionId": "sess_cf5aea52-dfbf-4f51-b185-398ff255f2ea",
+        "timestamp": 1785034205966
+      }
+    ]
+  }
+}
