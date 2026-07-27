@@ -22,12 +22,16 @@ Vue 3 is a peer dependency.
     :height="600"
     :color="{ r: 0, g: 0, b: 0 }"
     :stroke-radius="3"
+    :mode="mode"
     @stroke="onStroke"
   />
 </template>
 
 <script setup>
+import { ref } from 'vue';
 import { DrawView } from '@adamlockhart/draw-vue';
+
+const mode = ref('classic');
 
 function onStroke(stroke) {
   console.log('completed stroke', stroke);
@@ -41,10 +45,15 @@ function onStroke(stroke) {
 |------|------|---------|-------------|
 | `width` | `number` | `800` | Canvas width |
 | `height` | `number` | `600` | Canvas height |
-| `strokeRadius` | `number` | `3` | Stroke radius |
-| `maxError` | `number` | `5` | Error tolerance for smoothing |
+| `strokeRadius` | `number` | `3` | Dot radius for the classic mode |
+| `maxError` | `number` | `1` | Error tolerance for classic smoothing |
 | `color` | `{ r, g, b }` | `{ r: 0, g: 0, b: 0 }` | Stroke color |
 | `backgroundColor` | `string` | `'white'` | Canvas background color |
+| `mode` | `string` | `'classic'` | Active drawing mode id (`classic`, `square-bezier`, or `perfect-freehand`) |
+
+The component forwards `PointerEvent.pressure` into the engine, so the
+pressure-sensitive `perfect-freehand` mode responds to stylus pressure;
+centerline modes ignore it.
 
 ## Events
 
