@@ -14,6 +14,21 @@
         </ul>
       </div>
 
+      <!-- Mode dropdown -->
+      <div class="dropdown">
+        <button class="dropdown-toggle" @click.stop="toggleMenu('mode')">mode: {{ currentModeLabel }} <span class="caret" /></button>
+        <ul v-if="openMenu === 'mode'" class="dropdown-menu">
+          <li
+            v-for="m in modes"
+            :key="m.id"
+            :class="{ active: m.id === mode }"
+            @click="mode = m.id; openMenu = null"
+          >
+            {{ m.label }}
+          </li>
+        </ul>
+      </div>
+
       <!-- Color dropdown -->
       <div class="dropdown">
         <button class="dropdown-toggle" @click.stop="toggleMenu('color')">color <span class="caret" /></button>
@@ -28,21 +43,6 @@
         <ul v-if="openMenu === 'size'" class="dropdown-menu">
           <li v-for="s in sizes" :key="s" @click="strokeRadius = s; openMenu = null">
             {{ s * 2 }}
-          </li>
-        </ul>
-      </div>
-
-      <!-- Mode dropdown -->
-      <div class="dropdown">
-        <button class="dropdown-toggle" @click.stop="toggleMenu('mode')">mode: {{ currentModeLabel }} <span class="caret" /></button>
-        <ul v-if="openMenu === 'mode'" class="dropdown-menu">
-          <li
-            v-for="m in modes"
-            :key="m.id"
-            :class="{ active: m.id === mode }"
-            @click="mode = m.id; openMenu = null"
-          >
-            {{ m.label }}
           </li>
         </ul>
       </div>
