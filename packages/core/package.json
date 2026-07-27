@@ -18,6 +18,9 @@
     "build": "vite build",
     "dev": "vite build --watch"
   },
+  "dependencies": {
+    "perfect-freehand": "1.2.3"
+  },
   "devDependencies": {
     "vite": "^6.3.5"
   },

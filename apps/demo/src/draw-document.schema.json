@@ -7,9 +7,12 @@
   "properties": {
     "drawDocumentVersion": {
       "type": "string",
-      "enum": ["1.0"]
+      "enum": ["1.0", "1.1"]
     },
     "name": {
+      "type": "string"
+    },
+    "defaultMode": {
       "type": "string"
     },
     "strokes": {
@@ -18,18 +21,27 @@
         "type": "object",
         "required": ["points", "color"],
         "properties": {
+          "mode": {
+            "type": "string"
+          },
           "color": {
             "type": "string"
+          },
+          "options": {
+            "type": "object",
+            "additionalProperties": true
           },
           "points": {
             "type": "array",
             "items": {
               "type": "object",
-              "required": ["x", "y", "width"],
+              "required": ["x", "y"],
               "properties": {
                 "x": { "type": "number" },
                 "y": { "type": "number" },
                 "width": { "type": "number" },
+                "pressure": { "type": "number" },
+                "time": { "type": "number" },
                 "removed": { "type": "boolean" }
               },
               "additionalProperties": false

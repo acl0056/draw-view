@@ -43,6 +43,8 @@ const props = defineProps({
   height: { type: Number, default: 600 },
   strokeRadius: { type: Number, default: 3 },
   maxError: { type: Number, default: 1 },
+  // Active drawing mode id (e.g. 'classic', 'square-bezier', 'perfect-freehand').
+  mode: { type: String, default: 'classic' },
   color: { type: Object, default: () => ({ r: 0, g: 0, b: 0 }) },
   backgroundColor: { type: String, default: 'white' },
   // Cap on how many coalesced points to process per pointermove. Sits above
@@ -75,6 +77,7 @@ onMounted(() => {
     tempCtx,
     strokeRadius: props.strokeRadius,
     maxError: props.maxError,
+    mode: props.mode,
     color: props.color,
     decoupledPreview: props.decoupledPreview,
     debugPoints: props.debugPoints,
@@ -93,6 +96,10 @@ watch(() => props.maxError, (e) => {
   if (engine.value) engine.value.maxError = e;
 });
 
+watch(() => props.mode, (m) => {
+  if (engine.value) engine.value.setMode(m);
+});
+
 watch(() => props.debugPoints, (v) => {
   if (!engine.value) return;
   engine.value.debugPoints = v;
@@ -109,13 +116,17 @@ function onPointerDown(e) {
   isDrawing = true;
   tempCanvas.value.setPointerCapture(e.pointerId);
   const { x, y } = pointerPos(e);
-  engine.value.strokeStart(x, y);
+  engine.value.strokeStart(x, y, e.pressure);
 }
 
 function onPointerMove(e) {
   if (!isDrawing) return;
   const rect = tempCanvas.value.getBoundingClientRect();
-  const move = (ev) => engine.value.strokeMove(ev.clientX - rect.left, ev.clientY - rect.top);
+  const move = (ev) => engine.value.strokeMove(
+    ev.clientX - rect.left,
+    ev.clientY - rect.top,
+    ev.pressure,
+  );
 
   if (props.coalesceInput) {
     // The browser throttles pointermove delivery but samples input at a higher

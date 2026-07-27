@@ -1,147 +1,28 @@
 /**
- * DrawEngine — framework-independent stroke smoothing and curve-fitting engine.
+ * DrawEngine — framework-independent stroke lifecycle orchestrator.
  *
  * Accepts a CanvasRenderingContext2D and point data. Does not own event
  * listeners or DOM — the consumer handles input and feeds points in.
+ *
+ * The engine no longer contains any stroke-fitting algorithm itself. Instead it
+ * owns a ModeRegistry (populated with the built-in modes), tracks an active
+ * DrawingMode (default `classic`), and delegates the per-stroke pipeline to it:
+ *
+ *   strokeStart  -> mode.begin(point, style)
+ *   strokeMove   -> mode.addPoint(point)
+ *   renderPreview-> mode.renderPreview(tempCtx)
+ *   strokeEnd    -> mode.end() -> serializable stroke
+ *   strokeTap    -> mode.tap(point, style) (when the mode provides one)
+ *
+ * The engine hands each mode a style/context bundle describing where and how to
+ * draw (`ctx`, `tempCtx`, `colorPrefix`, `strokeRadius`, `maxError`,
+ * `decoupledPreview`, `debugPoints`). Replay (`redraw`, `setDocument`,
+ * `pushStroke`) resolves each stored stroke's mode through the registry and
+ * delegates to that mode's `replay`.
  */
 
-function distance(a, b) {
-  const x = b.x - a.x;
-  const y = b.y - a.y;
-  return Math.sqrt(x * x + y * y);
-}
-
-function tangentForPoints(v1, v2, v3, v4, v5) {
-  const d2 = { x: v3.x - v2.x, y: v3.y - v2.y };
-  const d3 = { x: v4.x - v3.x, y: v4.y - v3.y };
-
-  const w2 = Math.abs(d3.x * (v5.y - v4.y) - d3.y * (v5.x - v4.x));
-  const w3 = Math.abs((v2.x - v1.x) * d2.y - (v2.y - v1.y) * d2.x);
-
-  const a0 = w2 * d2.x + w3 * d3.x;
-  const b0 = w2 * d2.y + w3 * d3.y;
-
-  let multiplier = 1.0 / Math.sqrt(a0 * a0 + b0 * b0);
-  if (multiplier === Infinity) multiplier = 0;
-
-  return { origin: v3, direction: { x: a0 * multiplier, y: b0 * multiplier } };
-}
-
-function getAngle(p1, p2, p3) {
-  const dir1 = { x: p2.x - p1.x, y: p2.y - p1.y };
-  const dir2 = { x: p3.x - p2.x, y: p3.y - p2.y };
-  const len1 = Math.sqrt(dir1.x * dir1.x + dir1.y * dir1.y);
-  const len2 = Math.sqrt(dir2.x * dir2.x + dir2.y * dir2.y);
-  const norm1 = { x: dir1.x / len1, y: dir1.y / len1 };
-  const norm2 = { x: dir2.x / len2, y: dir2.y / len2 };
-  return Math.acos(norm1.x * norm2.x + norm1.y * norm2.y);
-}
-
-function cardinalCurve(z, a, b, c, t) {
-  const tension = 0.5;
-  const t2 = t * t;
-  const t3 = t * t2;
-  const l = 2 * t3 - 3 * t2 + 1;
-  const m = -2 * t3 + 3 * t2;
-  const n = tension * (t3 - 2 * t2 + t);
-  const o = tension * (t3 - t2);
-  return {
-    x: a.x * l + b.x * m + (b.x - z.x) * n + (c.x - a.x) * o,
-    y: a.y * l + b.y * m + (b.y - z.y) * n + (c.y - a.y) * o,
-  };
-}
-
-// --- VertexQueue (internal) ---
-
-class VertexQueue {
-  constructor() {
-    this.queue = [];
-    this.t1 = null;
-    this.t2 = null;
-  }
-
-  push(obj) {
-    const q = this.queue;
-    if (q.length) {
-      if (distance(obj, q[q.length - 1]) > 1) q.push(obj);
-    }
-    else {
-      q.push(obj);
-    }
-  }
-
-  getCount() {
-    let count = 0;
-    for (const p of this.queue) {
-      if (!p.removed) count += 1;
-    }
-    return count;
-  }
-
-  pop() {
-    while (this.queue.shift().removed) { /* skip removed */ }
-  }
-
-  reset() {
-    this.queue = [];
-    this.t1 = null;
-    this.t2 = null;
-  }
-
-  getPoints() {
-    return this.queue.filter((p) => !p.removed);
-  }
-
-  getRemovedPoints() {
-    const arr = [];
-    let notRemoved = 0;
-    for (const p of this.queue) {
-      if (p.removed) {
-        if (notRemoved === 6) arr.push(p);
-      }
-      else {
-        notRemoved += 1;
-      }
-    }
-    return arr;
-  }
-
-  estimateInitialTangent() {
-    const points = this.getPoints();
-    const p4 = points[2];
-    const p3 = points[1];
-    const p2 = points[0];
-    const s2 = { x: p3.x - p2.x, y: p3.y - p2.y };
-    const s1 = { x: s2.x * 2 - (p4.x - p3.x), y: s2.y * 2 - (p4.y - p3.y) };
-    const p1 = { x: p2.x - s1.x, y: p2.y - s1.y };
-    const p0 = { x: p1.x - (s1.x * 2 - s2.x), y: p1.y - (s1.y * 2 - s2.y) };
-    this.queue.unshift(p0, p1);
-    this.t2 = tangentForPoints(p0, p1, p2, p3, p4);
-  }
-
-  estimateEndPoints() {
-    const points = this.getPoints();
-    const p4 = points[4];
-    const p3 = points[3];
-    const p2 = points[2];
-    const s2 = { x: p3.x - p2.x, y: p3.y - p2.y };
-    const s3 = { x: p4.x - p3.x, y: p4.y - p3.y };
-    const s4 = { x: 2 * s3.x - s2.x, y: 2 * s3.y - s2.y };
-    const s5 = { x: 2 * s4.x - s3.x, y: 2 * s4.y - s3.y };
-    const p5 = { x: p4.x + s4.x, y: p4.y + s4.y };
-    const p6 = { x: p5.x + s5.x, y: p5.y + s5.y };
-    this.queue.push(p5, p6);
-  }
-
-  calculateTangent() {
-    const points = this.getPoints();
-    this.t1 = this.t2;
-    this.t2 = tangentForPoints(points[1], points[2], points[3], points[4], points[5]);
-    this.pop();
-  }
-}
-
-// --- DrawEngine ---
+import { ModeRegistry, registerBuiltInModes } from './modes/index.js';
+import { DEFAULT_MODE_ID } from './modes/DrawingMode.js';
 
 export class DrawEngine {
   /**
@@ -154,6 +35,13 @@ export class DrawEngine {
    * @param {{r:number, g:number, b:number}} [options.color={r:0,g:0,b:0}]
    * @param {boolean} [options.decoupledPreview=false] - if true, strokeMove
    *   skips inline preview; caller drives renderPreview()
+   * @param {boolean} [options.debugPoints=false]
+   * @param {string} [options.mode='classic'] - id of the initial active mode
+   * @param {object} [options.modeOptions] - per-mode options map (reserved for
+   *   modes that consume extra parameters)
+   * @param {string} [options.defaultMode='classic'] - document-level fallback
+   *   mode written onto newly created documents and used to resolve strokes
+   *   that omit a `mode` tag
    */
   constructor(options) {
     this.ctx = options.ctx;
@@ -169,9 +57,32 @@ export class DrawEngine {
     this.debugPoints = options.debugPoints ?? false;
     this.setColor(options.color?.r ?? 0, options.color?.g ?? 0, options.color?.b ?? 0);
 
-    this._vq = new VertexQueue();
-    this._stroke = [];
-    this._document = { drawDocumentVersion: '1.0' };
+    // Own the registry of built-in modes and resolve the active mode. An
+    // unknown requested id falls back to the default `classic` mode.
+    this._registry = new ModeRegistry();
+    registerBuiltInModes(this._registry);
+    this._modeOptions = options.modeOptions ?? {};
+
+    const requestedId = options.mode ?? DEFAULT_MODE_ID;
+    const resolved = this._registry.resolveActiveMode(requestedId);
+    if (resolved) {
+      this._activeModeId = requestedId;
+      this._activeMode = resolved;
+    }
+    else {
+      this._activeModeId = DEFAULT_MODE_ID;
+      this._activeMode = this._registry.get(DEFAULT_MODE_ID);
+    }
+
+    // The mode driving the in-progress stroke. Captured at strokeStart so a
+    // mid-stroke setMode() does not affect the stroke already underway.
+    this._currentMode = null;
+
+    // Document-level fallback mode written onto newly created documents and
+    // used when a stored stroke omits its own `mode` tag. Defaults to classic.
+    this._defaultMode = options.defaultMode ?? DEFAULT_MODE_ID;
+
+    this._document = this._createDocument();
   }
 
   // --- Public API ---
@@ -181,154 +92,80 @@ export class DrawEngine {
   }
 
   /**
+   * Switch the active mode for strokes started after this call. In-progress
+   * strokes are unaffected. An unregistered id keeps the current mode and
+   * surfaces a warning (Req 7.2).
+   * @param {string} modeId
+   * @returns {string} the id of the active mode after the call
+   */
+  setMode(modeId) {
+    const resolved = this._registry.resolveActiveMode(modeId);
+    if (!resolved) {
+      console.warn(
+        `[draw-view] Unknown drawing mode "${modeId}"; keeping current mode "${this._activeModeId}".`,
+      );
+      return this._activeModeId;
+    }
+    this._activeModeId = modeId;
+    this._activeMode = resolved;
+    return this._activeModeId;
+  }
+
+  /**
+   * @returns {string} the id of the active mode
+   */
+  getMode() {
+    return this._activeModeId;
+  }
+
+  /**
    * Call when a stroke begins (pointer down).
    * @param {number} x
    * @param {number} y
+   * @param {number} [pressure] - optional pointer pressure; ignored by
+   *   centerline modes. Existing two-argument calls remain valid.
    */
-  strokeStart(x, y) {
-    const radius = this.strokeRadius;
-    const point = { x, y, width: radius, removed: false };
-    this._clearTemp();
-    this._vq.push(point);
-    this._drawDot(x, y, radius, this.ctx);
-    this._stroke = [{ x, y, width: radius }];
+  strokeStart(x, y, pressure) {
+    this._currentMode = this._activeMode;
+    this._currentMode.begin(this._makePoint(x, y, pressure), this._style());
   }
 
   /**
    * Call on each pointer move during a stroke.
    * @param {number} x
    * @param {number} y
+   * @param {number} [pressure] - optional pointer pressure; ignored by
+   *   centerline modes.
    */
-  strokeMove(x, y) {
-    const radius = this.strokeRadius;
-    const point = { x, y, width: radius, removed: false };
-    const vq = this._vq;
-    vq.push(point);
-
-    let points = vq.getPoints();
-    const count = points.length;
-
-    if (count === 3) {
-      vq.estimateInitialTangent();
-    }
-    else if (count > 8) {
-      // Corner detection.
-      //
-      // The original implementation used a triple-nested loop over i/j/k, but
-      // the tested condition only ever depends on i (j and k were unused). The
-      // inner loops merely gated whether the body ran, which is true exactly
-      // when i <= count - 3 (keeping points[i + 2] in bounds). This single loop
-      // is behaviorally identical to the original but O(n) instead of O(n^3).
-      const corner = 1.618;
-      let hasCorner = false;
-      for (let i = 4; i < count - 2 && !hasCorner; i += 1) {
-        if (getAngle(points[i], points[i + 1], points[i + 2]) >= corner) {
-          hasCorner = true;
-        }
-      }
-
-      if (!hasCorner) {
-        // Knot removal
-        const distancePrev = distance(points[5], points[6]);
-        const t = distancePrev / (distancePrev + distance(points[6], points[7]));
-        const error = distance(
-          points[6],
-          cardinalCurve(points[4], points[5], points[7], points[8], t),
-        );
-        let removeKnot = error < this.maxError;
-
-        if (removeKnot) {
-          const removedPoints = vq.getRemovedPoints();
-          for (const removed of removedPoints) {
-            const dp = distance(points[5], removed);
-            const tr = dp / (dp + distance(removed, points[7]));
-            const err = distance(
-              removed,
-              cardinalCurve(points[4], points[5], points[7], points[8], tr),
-            );
-            if (err >= this.maxError) {
-              removeKnot = false;
-              break;
-            }
-          }
-        }
-
-        if (removeKnot) points[6].removed = true;
-      }
-
-      points = vq.getPoints();
-      if (points.length > 8) {
-        vq.calculateTangent();
-        this._drawCurve(points[2], points[3], vq.t1, vq.t2, this.ctx);
-        this._stroke.push(points[2]);
-      }
-    }
-
-    // Inline preview (original behavior). Skipped when the caller opts into
-    // decoupled preview and drives renderPreview() itself.
-    if (!this.decoupledPreview && this.tempCtx && points.length > 7) {
-      this._drawPreview(points);
-    }
+  strokeMove(x, y, pressure) {
+    const mode = this._currentMode ?? this._activeMode;
+    mode.addPoint(this._makePoint(x, y, pressure));
   }
 
   /**
    * Render the live, semi-transparent preview of the un-committed tail to the
-   * temp overlay, reflecting the current queue state.
-   *
-   * This is decoupled from strokeMove so callers feeding many points per frame
-   * (e.g. from PointerEvent.getCoalescedEvents) can ingest all of them but
-   * repaint the preview only once per frame. No-op without a temp context.
+   * temp overlay. Decoupled from strokeMove so callers feeding many points per
+   * frame can repaint the preview only once per frame. No-op without a temp
+   * context.
    */
   renderPreview() {
-    if (!this.tempCtx) return;
-    const points = this._vq.getPoints();
-    if (points.length > 7) {
-      this._drawPreview(points);
-    }
-    else {
-      this._clearTemp();
-    }
+    const mode = this._currentMode ?? this._activeMode;
+    mode.renderPreview(this.tempCtx);
   }
 
   /**
    * Call when a stroke ends (pointer up).
+   * @returns {object} the completed, serializable stroke
    */
   strokeEnd() {
-    const vq = this._vq;
-    let points = vq.getPoints();
+    const mode = this._currentMode ?? this._activeMode;
+    const stroke = mode.end();
+    this._tagStroke(stroke, mode);
 
-    if (points.length === 2) {
-      this._drawLine(points[0], points[1], this.ctx);
-    }
-    else if (points.length === 3) {
-      vq.estimateInitialTangent();
-      points = vq.getPoints();
-    }
-
-    while (points.length > 5) {
-      vq.calculateTangent();
-      this._drawCurve(points[2], points[3], vq.t1, vq.t2, this.ctx);
-      this._stroke.push(points[2]);
-      points = vq.getPoints();
-    }
-
-    if (points.length === 5) {
-      this._stroke.push(points[2], points[3], points[4]);
-      vq.estimateEndPoints();
-      vq.calculateTangent();
-      this._drawCurve(points[2], points[3], vq.t1, vq.t2, this.ctx);
-      vq.calculateTangent();
-      this._drawCurve(points[3], points[4], vq.t1, vq.t2, this.ctx);
-    }
-
-    // Save completed stroke to document
-    const stroke = { points: this._stroke, color: this._colorPrefix };
     if (!this._document.strokes) this._document.strokes = [];
     this._document.strokes.push(stroke);
 
-    this._stroke = [];
-    vq.reset();
-    this._clearTemp();
+    this._currentMode = null;
 
     // Debug: re-render so the just-finished stroke shows its point markers.
     if (this.debugPoints) this.redraw();
@@ -340,39 +177,50 @@ export class DrawEngine {
    * Handle a single tap (dot).
    * @param {number} x
    * @param {number} y
+   * @param {number} [pressure] - optional pointer pressure; ignored by
+   *   centerline modes.
+   * @returns {object} the serializable stroke
    */
-  strokeTap(x, y) {
-    const radius = this.strokeRadius;
-    this._drawDot(x, y, radius, this.ctx);
-    const stroke = { points: [{ x, y, width: radius }], color: this._colorPrefix };
+  strokeTap(x, y, pressure) {
+    const mode = this._activeMode;
+    const point = this._makePoint(x, y, pressure);
+    let stroke;
+    if (typeof mode.tap === 'function') {
+      stroke = mode.tap(point, this._style());
+    }
+    else {
+      // Fallback for modes without a dedicated tap: a zero-length stroke.
+      mode.begin(point, this._style());
+      stroke = mode.end();
+    }
+    this._tagStroke(stroke, mode);
+
     if (!this._document.strokes) this._document.strokes = [];
     this._document.strokes.push(stroke);
     return stroke;
   }
 
   /**
-   * Clear the canvas and redraw all strokes in the current document.
+   * Clear the canvas and redraw all strokes in the current document, routing
+   * each stroke to the mode that produced it.
    */
   redraw() {
-    const canvas = this.ctx.canvas;
+    const { canvas } = this.ctx;
     this.ctx.clearRect(0, 0, canvas.width, canvas.height);
     const strokes = this._document.strokes;
     if (!strokes) return;
-    const savedColor = this._colorPrefix;
     for (const stroke of strokes) {
-      this._colorPrefix = stroke.color;
-      this._processStroke(stroke);
+      this._replayStroke(stroke);
     }
-    this._colorPrefix = savedColor;
   }
 
   /**
    * Clear the canvas entirely and reset the document.
    */
   clear() {
-    const canvas = this.ctx.canvas;
+    const { canvas } = this.ctx;
     this.ctx.clearRect(0, 0, canvas.width, canvas.height);
-    this._document = { drawDocumentVersion: '1.0' };
+    this._document = this._createDocument();
   }
 
   /**
@@ -409,210 +257,83 @@ export class DrawEngine {
   pushStroke(stroke) {
     if (!this._document.strokes) this._document.strokes = [];
     this._document.strokes.push(stroke);
-    const savedColor = this._colorPrefix;
-    this._colorPrefix = stroke.color;
-    this._processStroke(stroke);
-    this._colorPrefix = savedColor;
+    this._replayStroke(stroke);
   }
 
-  // --- Private rendering methods ---
+  // --- Private helpers ---
 
-  _drawDot(x, y, radius, ctx) {
-    const isTemp = ctx === this.tempCtx;
-    const grd = ctx.createRadialGradient(x, y, 0, x, y, radius);
-    grd.addColorStop(0, this._colorPrefix + (isTemp ? ',0.333)' : ',1)'));
-    grd.addColorStop(1, `${this._colorPrefix},0)`);
-    ctx.fillStyle = grd;
-    ctx.beginPath();
-    ctx.arc(x, y, radius * 2, 0, 2 * Math.PI, false);
-    ctx.fill();
-    ctx.closePath();
-  }
-
-  _clearTemp() {
-    if (!this.tempCtx) return;
-    const canvas = this.tempCtx.canvas;
-    this.tempCtx.clearRect(0, 0, canvas.width, canvas.height);
+  /**
+   * Build a fresh, empty document at the current version. New documents are
+   * written at `1.1` to signal the extended, self-describing stroke shape
+   * (every stroke is tagged with its producing mode). Loaded `1.0` documents
+   * are left untouched by this factory and continue to resolve untagged
+   * strokes to classic via the registry fallback chain.
+   * @returns {{ drawDocumentVersion: string, defaultMode: string }}
+   */
+  _createDocument() {
+    return { drawDocumentVersion: '1.1', defaultMode: this._defaultMode };
   }
 
   /**
-   * Render the trailing, not-yet-finalized points to the temp overlay so the
-   * user sees a live preview of the stroke ahead of the committed curve.
-   * @param {object[]} points - current non-removed queue points
+   * Ensure a freshly produced stroke carries a `mode` tag identifying the mode
+   * that produced it. Modes that already self-tag (square-bezier,
+   * perfect-freehand) are left as-is; classic strokes, which carry no tag, are
+   * stamped with the producing mode's id (`classic`) so every stored stroke is
+   * self-describing without mutating the mode's own output shape.
+   * @param {object} stroke
+   * @param {import('./modes/DrawingMode.js').DrawingMode} mode
    */
-  _drawPreview(points) {
-    this._clearTemp();
-    const ctx = this.tempCtx;
-
-    let t1 = tangentForPoints(points[0], points[1], points[2], points[3], points[4]);
-    let t2 = tangentForPoints(points[1], points[2], points[3], points[4], points[5]);
-    this._drawCurve(points[2], points[3], t1, t2, ctx);
-
-    t1 = t2;
-    t2 = tangentForPoints(points[2], points[3], points[4], points[5], points[6]);
-    this._drawCurve(points[3], points[4], t1, t2, ctx);
-
-    t1 = t2;
-    t2 = tangentForPoints(points[3], points[4], points[5], points[6], points[7]);
-    this._drawCurve(points[4], points[5], t1, t2, ctx);
-
-    if (points.length > 8) {
-      this._drawLine(points[7], points[8], ctx);
-    }
-    this._drawLine(points[5], points[6], ctx);
-    this._drawLine(points[6], points[7], ctx);
-  }
-
-  _drawCurve(vStart, vEnd, t1, t2, ctx) {
-    const r = distance(t1.origin, t2.origin);
-    const p0 = t1.origin.x;
-    const p1 = r * t1.direction.x;
-    const p2 = 3 * (t2.origin.x - t1.origin.x) - r * (t2.direction.x + 2 * t1.direction.x);
-    const p3 = -2 * (t2.origin.x - t1.origin.x) + r * (t2.direction.x + t1.direction.x);
-    const q0 = t1.origin.y;
-    const q1 = r * t1.direction.y;
-    const q2 = 3 * (t2.origin.y - t1.origin.y) - r * (t2.direction.y + 2 * t1.direction.y);
-    const q3 = -2 * (t2.origin.y - t1.origin.y) + r * (t2.direction.y + t1.direction.y);
-
-    const currentWidth = vStart.width;
-    const kStrokeStep = 0.45;
-    const kIncrement = 0.001;
-    let tFinder = 0;
-    let drawVertex = { x: vStart.x, y: vStart.y };
-
-    this._drawDot(drawVertex.x, drawVertex.y, currentWidth, ctx);
-
-    for (let t = 0; t + tFinder < 1.0; t += tFinder) {
-      let tempVert = { x: vEnd.x, y: vEnd.y };
-      const d = distance(drawVertex, tempVert);
-      const w = kStrokeStep * currentWidth;
-
-      if (d < w) {
-        tFinder = 1.0;
-      }
-      else if (d === w) {
-        tFinder = 1.0;
-      }
-      else {
-        const t2v = t * t;
-        const t3v = t2v * t;
-        tempVert = { x: p0 + p1 * t + p2 * t2v + p3 * t3v, y: q0 + q1 * t + q2 * t2v + q3 * t3v };
-        if (distance(drawVertex, tempVert) < w) {
-          for (tFinder = kIncrement; distance(drawVertex, tempVert) < w && t + tFinder < 1.0; tFinder += kIncrement) {
-            const tf = t + tFinder;
-            const tf2 = tf * tf;
-            const tf3 = tf2 * tf;
-            tempVert = { x: p0 + p1 * tf + p2 * tf2 + p3 * tf3, y: q0 + q1 * tf + q2 * tf2 + q3 * tf3 };
-          }
-        }
-        else {
-          tFinder = kIncrement;
-        }
-        drawVertex = tempVert;
-        this._drawDot(drawVertex.x, drawVertex.y, currentWidth, ctx);
-      }
+  _tagStroke(stroke, mode) {
+    if (stroke && stroke.mode === undefined) {
+      stroke.mode = mode.id;
     }
   }
 
-  _drawLine(vStart, vEnd, ctx) {
-    let currentWidth = vStart.width;
-    const wStart = vStart.width;
-    const wEnd = vEnd.width;
-    const kStrokeStep = 0.45;
-    const kIncrement = 0.001;
-    let tFinder = 0;
-    let drawVertex = { x: vStart.x, y: vStart.y };
-
-    this._drawDot(drawVertex.x, drawVertex.y, wStart, ctx);
-
-    for (let t = 0; t + tFinder < 1.0; t += tFinder) {
-      let tempVert = { x: vEnd.x, y: vEnd.y };
-      const d = distance(drawVertex, tempVert);
-      const w = kStrokeStep * currentWidth;
-
-      if (d < w) {
-        tFinder = 1.0;
-      }
-      else if (d === w) {
-        tFinder = 1.0;
-      }
-      else {
-        tempVert = {
-          x: vStart.x + (vEnd.x - vStart.x) * t,
-          y: vStart.y + (vEnd.y - vStart.y) * t,
-        };
-        if (distance(drawVertex, tempVert) < w) {
-          for (tFinder = kIncrement; distance(drawVertex, tempVert) < w && t + tFinder < 1.0; tFinder += kIncrement) {
-            const tf = t + tFinder;
-            tempVert = {
-              x: vStart.x + (vEnd.x - vStart.x) * tf,
-              y: vStart.y + (vEnd.y - vStart.y) * tf,
-            };
-          }
-        }
-        else {
-          tFinder = kIncrement;
-        }
-        drawVertex = { x: tempVert.x, y: tempVert.y };
-        currentWidth = wStart + (wEnd - wStart) * t;
-        this._drawDot(drawVertex.x, drawVertex.y, currentWidth, ctx);
-      }
-    }
+  /**
+   * Build a point for a mode, attaching pressure only when supplied so
+   * existing two-argument lifecycle calls behave exactly as before.
+   * @param {number} x
+   * @param {number} y
+   * @param {number} [pressure]
+   * @returns {{ x: number, y: number, pressure?: number }}
+   */
+  _makePoint(x, y, pressure) {
+    const point = { x, y };
+    if (pressure !== undefined) point.pressure = pressure;
+    return point;
   }
 
-  _processStroke(stroke) {
-    const points = stroke.points;
-    if (!points || points.length === 0) return;
-
-    if (points.length < 4) {
-      // Just dots or short lines
-      if (points.length === 1) {
-        this._drawDot(points[0].x, points[0].y, points[0].width, this.ctx);
-      }
-      else {
-        for (let i = 0; i < points.length - 1; i++) {
-          this._drawLine(points[i], points[i + 1], this.ctx);
-        }
-      }
-      return;
-    }
-
-    const vq = new VertexQueue();
-    for (let j = 0; j < points.length; j++) {
-      vq.push(points[j]);
-      if (j === 3) {
-        vq.estimateInitialTangent();
-      }
-      else if (j > 3) {
-        vq.calculateTangent();
-        this._drawCurve(points[j - 3], points[j - 2], vq.t1, vq.t2, this.ctx);
-        if (j === points.length - 1) {
-          vq.estimateEndPoints();
-          vq.calculateTangent();
-          this._drawCurve(points[j - 2], points[j - 1], vq.t1, vq.t2, this.ctx);
-          vq.calculateTangent();
-          this._drawCurve(points[j - 1], points[j], vq.t1, vq.t2, this.ctx);
-        }
-      }
-    }
-
-    // Debug: overlay markers at the FITTED points (after render reduction) so
-    // we can see the taper effect — dense at the ends, sparse in the middle.
-    // The first point is drawn larger so the start is easy to spot.
-    if (this.debugPoints) {
-      for (let i = 0; i < points.length; i += 1) {
-        this._drawMarker(points[i].x, points[i].y, i === 0 ? 4 : 2);
-      }
-    }
+  /**
+   * The style/context bundle handed to a mode. Read fresh each call so live
+   * mutations of `strokeRadius`, `maxError`, `debugPoints`, color, etc. take
+   * effect on the next stroke, mirroring the previous engine behavior.
+   * @returns {object}
+   */
+  _style() {
+    return {
+      ctx: this.ctx,
+      tempCtx: this.tempCtx,
+      colorPrefix: this._colorPrefix,
+      strokeRadius: this.strokeRadius,
+      maxError: this.maxError,
+      decoupledPreview: this.decoupledPreview,
+      debugPoints: this.debugPoints,
+    };
   }
 
-  _drawMarker(x, y, radius) {
-    const ctx = this.ctx;
-    ctx.save();
-    ctx.fillStyle = 'rgba(255,0,0,0.85)';
-    ctx.beginPath();
-    ctx.arc(x, y, radius, 0, 2 * Math.PI, false);
-    ctx.fill();
-    ctx.restore();
+  /**
+   * Resolve a stored stroke's mode via the registry (absent id -> document
+   * defaultMode -> `classic`) and replay it onto the main context. The engine's
+   * current style is applied first so replay-time concerns like `debugPoints`
+   * reflect the engine state, while the mode restores per-stroke color itself.
+   * @param {object} stroke
+   */
+  _replayStroke(stroke) {
+    const mode = this._registry.resolveReplayMode(stroke.mode, this._document.defaultMode)
+      ?? this._activeMode;
+    if (typeof mode._applyStyle === 'function') {
+      mode._applyStyle(this._style());
+    }
+    mode.replay(stroke, this.ctx);
   }
 }
