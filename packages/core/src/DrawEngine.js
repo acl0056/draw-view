@@ -124,10 +124,13 @@ export class DrawEngine {
    * @param {number} y
    * @param {number} [pressure] - optional pointer pressure; ignored by
    *   centerline modes. Existing two-argument calls remain valid.
+   * @param {number} [time] - optional input event timestamp in ms (e.g.
+   *   PointerEvent.timeStamp); used by velocity-based modes. Existing calls
+   *   without it stay valid.
    */
-  strokeStart(x, y, pressure) {
+  strokeStart(x, y, pressure, time) {
     this._currentMode = this._activeMode;
-    this._currentMode.begin(this._makePoint(x, y, pressure), this._style());
+    this._currentMode.begin(this._makePoint(x, y, pressure, time), this._style());
   }
 
   /**
@@ -136,10 +139,13 @@ export class DrawEngine {
    * @param {number} y
    * @param {number} [pressure] - optional pointer pressure; ignored by
    *   centerline modes.
+   * @param {number} [time] - optional input event timestamp in ms (e.g.
+   *   PointerEvent.timeStamp); used by velocity-based modes. Existing calls
+   *   without it stay valid.
    */
-  strokeMove(x, y, pressure) {
+  strokeMove(x, y, pressure, time) {
     const mode = this._currentMode ?? this._activeMode;
-    mode.addPoint(this._makePoint(x, y, pressure));
+    mode.addPoint(this._makePoint(x, y, pressure, time));
   }
 
   /**
@@ -179,11 +185,14 @@ export class DrawEngine {
    * @param {number} y
    * @param {number} [pressure] - optional pointer pressure; ignored by
    *   centerline modes.
+   * @param {number} [time] - optional input event timestamp in ms (e.g.
+   *   PointerEvent.timeStamp); used by velocity-based modes. Existing calls
+   *   without it stay valid.
    * @returns {object} the serializable stroke
    */
-  strokeTap(x, y, pressure) {
+  strokeTap(x, y, pressure, time) {
     const mode = this._activeMode;
-    const point = this._makePoint(x, y, pressure);
+    const point = this._makePoint(x, y, pressure, time);
     let stroke;
     if (typeof mode.tap === 'function') {
       stroke = mode.tap(point, this._style());
@@ -290,16 +299,19 @@ export class DrawEngine {
   }
 
   /**
-   * Build a point for a mode, attaching pressure only when supplied so
+   * Build a point for a mode, attaching pressure and time only when supplied so
    * existing two-argument lifecycle calls behave exactly as before.
    * @param {number} x
    * @param {number} y
    * @param {number} [pressure]
-   * @returns {{ x: number, y: number, pressure?: number }}
+   * @param {number} [time] - input event timestamp in ms; used by
+   *   velocity-based modes.
+   * @returns {{ x: number, y: number, pressure?: number, time?: number }}
    */
-  _makePoint(x, y, pressure) {
+  _makePoint(x, y, pressure, time) {
     const point = { x, y };
     if (pressure !== undefined) point.pressure = pressure;
+    if (time !== undefined) point.time = time;
     return point;
   }
 
