@@ -3,25 +3,30 @@
     class="draw-view"
     :style="{ position: 'relative', width: `${width}px`, height: `${height}px` }"
   >
+    <!--
+      No :width/:height attribute bindings: those are the backing store in
+      device pixels and are set imperatively in applyCanvasSize(). The :style
+      width/height below is the layout size in CSS pixels.
+    -->
     <canvas
       ref="baseCanvas"
-      :width="width"
-      :height="height"
       :style="{
         position: 'absolute',
         top: 0,
         left: 0,
+        width: `${width}px`,
+        height: `${height}px`,
         backgroundColor,
       }"
     />
     <canvas
       ref="tempCanvas"
-      :width="width"
-      :height="height"
       :style="{
         position: 'absolute',
         top: 0,
         left: 0,
+        width: `${width}px`,
+        height: `${height}px`,
         touchAction: 'none',
       }"
       @pointerdown="onPointerDown"
@@ -47,6 +52,10 @@ const props = defineProps({
   mode: { type: String, default: 'classic' },
   color: { type: Object, default: () => ({ r: 0, g: 0, b: 0 }) },
   backgroundColor: { type: String, default: 'white' },
+  // Device pixels per CSS pixel used for the canvas backing store. 0 (the
+  // default) means auto: use window.devicePixelRatio || 1. An explicit value
+  // lets a caller pin the ratio or disable scaling entirely (pass 1).
+  pixelRatio: { type: Number, default: 0 },
   // Cap on how many coalesced points to process per pointermove. Sits above
   // any realistic per-frame batch, so normal drawing is never decimated; it
   // only engages to tame a runaway batch after a main-thread stall.
@@ -69,7 +78,49 @@ const tempCanvas = ref(null);
 const engine = shallowRef(null);
 let isDrawing = false;
 
+/**
+ * Resolve the device-pixel ratio to render at.
+ * @returns {number} the explicit `pixelRatio` prop when > 0, else the display's.
+ */
+function effectivePixelRatio() {
+  return props.pixelRatio > 0 ? props.pixelRatio : (window.devicePixelRatio || 1);
+}
+
+/**
+ * Size both canvases for the current display: backing store in device pixels,
+ * layout size in CSS pixels (the latter comes from the :style bindings in the
+ * template), then scale each context so all drawing coordinates stay in CSS
+ * pixels.
+ *
+ * IMPORTANT: assigning canvas.width/height resets the entire 2D context state
+ * (transform, fillStyle, lineWidth, ...), so the scale MUST be re-applied every
+ * time the size changes — which is why the setTransform/scale pair lives here
+ * rather than being done once at construction.
+ *
+ * Note: the engine and modes clear with
+ * `clearRect(0, 0, canvas.width, canvas.height)`, i.e. a device-pixel extent
+ * fed to a scaled context, so they over-clear in user units. That is intentional
+ * and harmless — clearRect is clipped to the canvas — so the core stays
+ * DPR-agnostic.
+ */
+function applyCanvasSize() {
+  const ratio = effectivePixelRatio();
+  const backingWidth = Math.round(props.width * ratio);
+  const backingHeight = Math.round(props.height * ratio);
+
+  [baseCanvas.value, tempCanvas.value].forEach((canvas) => {
+    if (!canvas) return;
+    canvas.width = backingWidth;
+    canvas.height = backingHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.scale(ratio, ratio);
+  });
+}
+
 onMounted(() => {
+  // Size and scale before the engine captures the contexts.
+  applyCanvasSize();
   const ctx = baseCanvas.value.getContext('2d');
   const tempCtx = tempCanvas.value.getContext('2d');
   engine.value = new DrawEngine({
@@ -82,6 +133,13 @@ onMounted(() => {
     decoupledPreview: props.decoupledPreview,
     debugPoints: props.debugPoints,
   });
+});
+
+// Resizing (or a DPR change) resets the backing store and wipes the pixels, so
+// re-scale and then replay the committed strokes.
+watch([() => props.width, () => props.height, () => props.pixelRatio], () => {
+  applyCanvasSize();
+  if (engine.value) engine.value.redraw();
 });
 
 watch(() => props.color, (c) => {
@@ -116,7 +174,7 @@ function onPointerDown(e) {
   isDrawing = true;
   tempCanvas.value.setPointerCapture(e.pointerId);
   const { x, y } = pointerPos(e);
-  engine.value.strokeStart(x, y, e.pressure);
+  engine.value.strokeStart(x, y, e.pressure, e.timeStamp);
 }
 
 function onPointerMove(e) {
@@ -126,6 +184,7 @@ function onPointerMove(e) {
     ev.clientX - rect.left,
     ev.clientY - rect.top,
     ev.pressure,
+    ev.timeStamp,
   );
 
   if (props.coalesceInput) {

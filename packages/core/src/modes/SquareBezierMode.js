@@ -207,7 +207,12 @@ export class SquareBezierMode extends DrawingMode {
     this._resetStrokeState();
     this._clearTemp();
 
-    const timed = { x: point.x, y: point.y, time: this._now() };
+    // Prefer the point's own timestamp (the real input event time) so batched/
+    // coalesced events yield correct per-segment velocities; `_now()` is the
+    // fallback when no timestamp was threaded through.
+    const timed = {
+      x: point.x, y: point.y, time: typeof point.time === 'number' ? point.time : this._now(),
+    };
     this._addBufferedPoint(timed);
 
     const dotWidth = this._dotWidth();
@@ -223,7 +228,13 @@ export class SquareBezierMode extends DrawingMode {
    * @param {{ x:number, y:number }} point
    */
   addPoint(point) {
-    const timed = { x: point.x, y: point.y, time: this._now() };
+    // Prefer the point's own timestamp (the real input event time) so batched/
+    // coalesced events yield correct per-segment velocities; `_now()` is the
+    // fallback when no timestamp was threaded through.
+    const timed = {
+      x: point.x, y: point.y, time: typeof point.time === 'number' ? point.time : this._now(),
+    };
+
     const curve = this._addBufferedPoint(timed);
 
     let width = this._lastWidth;
@@ -289,7 +300,12 @@ export class SquareBezierMode extends DrawingMode {
   tap(point, style = {}) {
     this._applyStyle(style);
     this._resetStrokeState();
-    const timed = { x: point.x, y: point.y, time: this._now() };
+    // Prefer the point's own timestamp (the real input event time) so batched/
+    // coalesced events yield correct per-segment velocities; `_now()` is the
+    // fallback when no timestamp was threaded through.
+    const timed = {
+      x: point.x, y: point.y, time: typeof point.time === 'number' ? point.time : this._now(),
+    };
     const dotWidth = this._dotWidth();
     this._drawDot(timed, dotWidth, this._ctx);
     return {
